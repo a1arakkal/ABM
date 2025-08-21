@@ -65,8 +65,9 @@ save(run_ABM, file = "test.run.RData")
 
 # Load ABM res -----------------------------------------------------------------
 
-setwd("/Users/atlan/dissertation/real_data_application/paper3/")
+setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/")
 load("test.run.RData")
+n_trial <- length(run_ABM)
 
 # Average R0 across trials -----------------------------------------------------
 
@@ -114,6 +115,26 @@ ggplot(data, aes(x = time, y = average_interactions_by_time)) +
     x = "Time (weeks)",
     y = "Mean number of interactions"
   ) 
+
+# # Check
+# interactions %>% 
+#   filter(timestamp>14) %>% 
+#   group_by(timestamp) %>%  
+#   summarise(ave = 2*sum(n)/692,
+#             n_int = sum(n),
+#             den = n_int/((total_actors*(total_actors-1))*0.5),
+#             ave2 = den*691) %>% 
+#   ggplot(aes(x = timestamp, y = ave)) +
+#   geom_line(size = 1) +
+#   theme_minimal() +
+#   labs(
+#     title = "Average number of interactions by time averaged over trials",
+#     x = "Time (weeks)",
+#     y = "Mean number of interactions"
+#   ) 
+# 
+# plot(sapply(int_and_neighbors_by_t, function(x) sum(x$n_total_t)/total_actors), type = "l")
+
 
 # Average cumulative interaction across trials ---------------------------------
 

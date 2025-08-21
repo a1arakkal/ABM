@@ -80,7 +80,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       
       # Count number of interactions by actor
       n_interactions <- int_and_neighbors_t$n_total_t
-      average_interaction[k] <- sum(n_interactions)/length(actors)
+      average_interaction[k] <- sum(n_interactions)/length(actors) # not just mean(n_interactions) as we want to include the 0's
       
       # Update cumulative number of interactions per actor
       invisible(lapply(names(n_interactions),
@@ -260,7 +260,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   return(list(res = res,
               incidence = incidence,
               average_interactions_by_time = average_interaction,
-              average_cumulative_interactions = mean(sapply(names(actors),
+              average_cumulative_interactions_per_actor = mean(sapply(names(actors),
                                                             function(x){actors[[x]]$n_contacts})),
               attack_rate = mean(sapply(names(actors),
                                         function(x){actors[[x]]$ever_infected})),
