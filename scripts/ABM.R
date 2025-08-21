@@ -78,7 +78,9 @@ boxplot(R0)
 
 # Introducing exposure days can increase R0 as the seed will have
 # to compete with fewer infectious agents at a given t thus more likely to have 
-# 1st gen infections.
+# 1st gen infections. But in the limit of exposure day it should give most 
+# accurate estimate of R0 as only infectious agent will be seed and all
+# infections will be 1st gen.
 
 # Average acttack across trials ------------------------------------------------
 
