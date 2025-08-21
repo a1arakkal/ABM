@@ -69,7 +69,6 @@ interactions %>%
   group_by(timestamp) %>%  
   summarise(n_int = n(),
             den = n()/((total_actors*(total_actors-1))*0.5)) %>%  # we only have lower diag so sum is size of edge set
-  # we only have lower diag so sum is size of edge set
   .$den %>% range
 
 # Create nested list with first layer being timestamp and within each t
@@ -194,6 +193,8 @@ A <- Matrix::sparseMatrix(i = cns_el$user_a,
                           dims = c(total_actors, total_actors),
                           symmetric = TRUE)
 # all.equal(A, B, check.attributes = F)
+rownames(A) <- 1:total_actors
+colnames(A) <- 1:total_actors
 
 # Check for isolates. These will be removed from LSHM approach so they will no
 # be assigned into a cluster. Thus, in intervention if these actors are the seed

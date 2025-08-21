@@ -1,11 +1,3 @@
-# Load libraries ---------------------------------------------------------------
-library(ggplot2)
-
-# Load in interactions by time list --------------------------------------------
-setwd("/Users/atlan/dissertation/real_data_application/paper3/")
-
-load(file = "int_and_neighbors_by_t.RData")
-
 # Helper function --------------------------------------------------------------
 
 # This function is to initialze the environment to keep track of the actors's states
@@ -79,7 +71,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       if(length(c(sup_t,exp_t,inf_t)) == 0){
         break
       }
-
+      
       # Who is quarantined at time t (INSERT INTERVENTION HERE)
       qua_t <- names(which(state_t == 4))
       
@@ -89,7 +81,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       # Count number of interactions by actor
       n_interactions <- int_and_neighbors_t$n_total_t
       average_interaction[k] <- mean(n_interactions)
-
+      
       # Update cumulative number of interactions per actor
       invisible(lapply(names(n_interactions),
                        function(x){actors[[x]]$n_contacts <- actors[[x]]$n_contacts + n_interactions[[x]]}))
@@ -245,7 +237,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                          function(x){actors[[x]]$duration_quarantined<- actors[[x]]$duration_quarantined - 1L}))
         
         dur_quarantined_t <- sapply(qua_t,
-                                function(x){actors[[x]]$duration_quarantined})
+                                    function(x){actors[[x]]$duration_quarantined})
         
         if(any(dur_quarantined_t == 0)){
           
@@ -276,141 +268,3 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                               function(x){actors[[x]]$first_gen_infection}), na.rm = T)))
   
 }
-
-# Parameters ------------------------------------------------------------------
-
-# prob of transmisson among infected
-p_infected <- 0.005
-
-# mean days exposed
-mean_exposure_days <- 1 # NULL is SIR model
-
-# days infected
-mean_infected_days <- 5L
-
-# Initilize actors
-actor_labels <- 1:total_actors
-
-# N time-steps
-timesteps <- names(int_and_neighbors_by_t)
-
-# Number of times to repeat weeks of interaction
-n_repeat <- 4 # 2*n_repeat weeks
-
-
-# test <- run_single_ABM(p_infected = p_infected,
-#                        mean_exposure_days = mean_exposure_days,
-#                        mean_infected_days = mean_infected_days,
-#                        actor_labels = actor_labels,
-#                        timesteps = timesteps,
-#                        n_repeat = n_repeat)
-
-# microbenchmark::microbenchmark(run_single_ABM(p_infected = p_infected,
-#                                               mean_exposure_days = mean_exposure_days,
-#                                               mean_infected_days = mean_infected_days,
-#                                               actor_labels = actor_labels,
-#                                               timesteps = timesteps,
-#                                               n_repeat = n_repeat),
-# times = 100)
-
-# Run ABM for multiple trials --------------------------------------------------
-
-n_trial <- 1e4
-run_ABM <- parallel::mclapply(1:n_trial,
-                              FUN = function(x){run_single_ABM(p_infected = p_infected,
-                                                               mean_exposure_days = mean_exposure_days, 
-                                                               mean_infected_days = mean_infected_days,
-                                                               actor_labels = actor_labels,
-                                                               timesteps = timesteps,
-                                                               n_repeat = n_repeat)},
-                              mc.preschedule = TRUE,
-                              mc.cores = 5)
-
-save(run_ABM, file = "test.run.RData")
-
-# Load ABM res -----------------------------------------------------------------
-
-setwd("/Users/atlan/dissertation/real_data_application/paper3/")
-load("test.run.RData")
-
-# Average R0 across trials -----------------------------------------------------
-
-R0 <- sapply(run_ABM, function(x){x$R0})
-cat("Estimated R0:", mean(R0))
-quantile(R0, probs = c(0.025,0.975))
-boxplot(R0)
-
-# Average acttack across trials ------------------------------------------------
-
-attack_rate <- sapply(run_ABM, function(x){x$attack_rate})
-mean(attack_rate)
-quantile(attack_rate, probs = c(0.025,0.975))
-boxplot(attack_rate)
-
-# Average incidence across trials ----------------------------------------------
-
-incidence <- Reduce("+", lapply(run_ABM, function(x){x$incidence}))/n_trial
-cat("Estimated max number of incident cases:", max(incidence))
-data <- data.frame(incidence = incidence,
-           time = 1:length(incidence))
-
-ggplot(data, aes(x = time, y = incidence)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(
-    title = "Number of incident cases by time averaged over trials",
-    x = "Time (days)",
-    y = "Mean Incidence"
-  ) 
-
-# Average interactions per time across trials ----------------------------------
-
-average_interactions_by_time <- Reduce("+", lapply(run_ABM, function(x){x$average_interactions_by_time}))/n_trial
-data <- data.frame(incidence = average_interactions_by_time,
-                   time = 1:length(average_interactions_by_time))
-
-ggplot(data, aes(x = time, y = average_interactions_by_time)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  scale_x_continuous(breaks = seq(7, 56, 7),
-                     labels = c(1:8)) +
-  labs(
-    title = "Average number of interactions by time averaged over trials",
-    x = "Time (weeks)",
-    y = "Mean number of interactions"
-  ) 
-
-# Average cumulative interaction across trials ---------------------------------
-
-average_cumulative_interactions <- Reduce("+", lapply(run_ABM, function(x){x$average_cumulative_interactions}))/n_trial
-cat("Estimated average cumulative number of interactions:", average_cumulative_interactions)
-
-# Average trajectories across trials -------------------------------------------
-
-res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
-res_mean <- apply(res_array, c(1,2), mean)
-res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
-res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
-
-time <- 1:ncol(res_mean)
-compartments <- rownames(res_mean)
-
-df <- data.frame(
-  time = rep(time, each = nrow(res_mean)),
-  Compartment = rep(compartments, times = ncol(res_mean)),
-  mean = as.vector(res_mean),
-  lower = as.vector(res_quantile_lower),
-  upper = as.vector(res_quantile_upper)
-)
-
-ggplot(df, aes(x = time, y = mean, color = Compartment, fill = Compartment)) +
-  # geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(
-    title = "ABM trajectories averaged over trials",
-    x = "Time",
-    y = "Mean number of actors"
-  ) +
-  scale_color_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1")
