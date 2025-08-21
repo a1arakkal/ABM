@@ -80,7 +80,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       
       # Count number of interactions by actor
       n_interactions <- int_and_neighbors_t$n_total_t
-      average_interaction[k] <- mean(n_interactions)
+      average_interaction[k] <- sum(n_interactions)/length(actors)
       
       # Update cumulative number of interactions per actor
       invisible(lapply(names(n_interactions),
