@@ -32,7 +32,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   # Randomly select patient 0
   seed_index <- as.character(sample.int(n = length(actors), size = 1))
   actors[[seed_index]]$state <- 2L 
-  actors[[seed_index]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+  # actors[[seed_index]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+  actors[[seed_index]]$duration_infected <- rgeom(n = 1, p = 1/mean_infected_days) + 1
   actors[[seed_index]]$ever_infected <- T
   
   # Pre-allocate results storage
@@ -170,13 +171,14 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                  if(is.null(mean_exposure_days)){
                                    
                                    actors[[x]]$state <- 2L
-                                   actors[[x]]$duration_infected<- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+                                   # actors[[x]]$duration_infected<- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+                                   actors[[x]]$duration_infected<- rgeom(n = 1, p = 1/mean_infected_days) + 1
                                    
                                  } else {
                                    
                                    actors[[x]]$state <- 1L
-                                   actors[[x]]$duration_exposed <- extraDistr::rtpois(n = 1, lambda = mean_exposure_days, a = 0.0)
-                                   
+                                   # actors[[x]]$duration_exposed <- extraDistr::rtpois(n = 1, lambda = mean_exposure_days, a = 0.0)
+                                   actors[[x]]$duration_exposed <- rgeom(n = 1, p = 1/mean_exposure_days) + 1
                                  }
                                  
                                }))
@@ -203,7 +205,9 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           invisible(lapply(exp_t[which(dur_exposed_t == 0)],
                            function(x){
                              actors[[x]]$state <- 2L # infective
-                             actors[[x]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+                             # actors[[x]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
+                             actors[[x]]$duration_infected<- rgeom(n = 1, p = 1/mean_infected_days) + 1
+                             
                            }))
           
         }  

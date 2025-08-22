@@ -199,6 +199,6 @@ colnames(A) <- 1:total_actors
 # Check for isolates. These will be removed from LSHM approach so they will no
 # be assigned into a cluster. Thus, in intervention if these actors are the seed
 # can only isolated the individual actors.
-which(rowSums(A) == 0)
+which(rowSums(A) == 0) #16
 
 saveRDS(A, file = "adjacency_mat_week_1_2.RDS")
