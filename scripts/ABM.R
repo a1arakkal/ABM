@@ -1,7 +1,3 @@
-# Load libraries ---------------------------------------------------------------
-
-library(ggplot2)
-
 # Load in interactions by time list --------------------------------------------
 
 setwd("/Users/atlan/dissertation/real_data_application/paper3/")
@@ -46,7 +42,7 @@ p_asym <- 0.2
 actor_labels <- 1:total_actors
 
 # Clusters for quarantine
-clusters <- clusters_accounting_for_noise # NULL no intervention
+# clusters <- clusters_accounting_for_noise # NULL no intervention, any unnamed vector eg 1 will isolate individuals not clusters
 quarantine_days <- 7 # NULL no intervention
 
 # N time-steps
@@ -79,8 +75,11 @@ n_repeat <- 4 # 2*n_repeat weeks
 # Run ABM for multiple trials --------------------------------------------------
 
 n_trial <- 1e4
+cores <- 100L
+
+## Run ABM with no intervention 
 set.seed(1234, kind = "L'Ecuyer-CMRG")
-run_ABM <- parallel::mclapply(1:n_trial,
+run_ABM_no_intervention <- parallel::mclapply(1:n_trial,
                               FUN = function(x){run_single_ABM(p_infected = p_infected,
                                                                mean_exposure_days = mean_exposure_days, 
                                                                mean_infected_days = mean_infected_days,
@@ -88,17 +87,91 @@ run_ABM <- parallel::mclapply(1:n_trial,
                                                                timesteps = timesteps,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
-                                                               clusters = clusters,
+                                                               clusters = NULL,
                                                                quarantine_days = quarantine_days)},
                               mc.preschedule = TRUE,
-                              mc.cores = 40)
+                              mc.cores = cores)
 
-save(run_ABM, file = "test.run.RData")
+## Run ABM with isolating individual actors not clusters
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_isolate_individuals <- parallel::mclapply(1:n_trial,
+                                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                                               mean_exposure_days = mean_exposure_days, 
+                                                                               mean_infected_days = mean_infected_days,
+                                                                               actor_labels = actor_labels,
+                                                                               timesteps = timesteps,
+                                                                               n_repeat = n_repeat,
+                                                                               p_asym = p_asym,
+                                                                               clusters = 1,
+                                                                               quarantine_days = quarantine_days)},
+                                              mc.preschedule = TRUE,
+                                              mc.cores = cores)
+
+## Run ABM with clustering accounting for noise
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_accounting_for_noise <- parallel::mclapply(1:n_trial,
+                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                               mean_exposure_days = mean_exposure_days, 
+                                                               mean_infected_days = mean_infected_days,
+                                                               actor_labels = actor_labels,
+                                                               timesteps = timesteps,
+                                                               n_repeat = n_repeat,
+                                                               p_asym = p_asym,
+                                                               clusters = clusters_accounting_for_noise,
+                                                               quarantine_days = quarantine_days)},
+                              mc.preschedule = TRUE,
+                              mc.cores = cores)
+
+## Run ABM with clustering ignoring for noise
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_ignore_noise <- parallel::mclapply(1:n_trial,
+                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                               mean_exposure_days = mean_exposure_days, 
+                                                               mean_infected_days = mean_infected_days,
+                                                               actor_labels = actor_labels,
+                                                               timesteps = timesteps,
+                                                               n_repeat = n_repeat,
+                                                               p_asym = p_asym,
+                                                               clusters = clusters_ignore_noise,
+                                                               quarantine_days = quarantine_days)},
+                              mc.preschedule = TRUE,
+                              mc.cores = cores)
+
+## Run ABM with clustering dichotomize network with cutoff of 1
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_dichotomize_g_1 <- parallel::mclapply(1:n_trial,
+                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                               mean_exposure_days = mean_exposure_days, 
+                                                               mean_infected_days = mean_infected_days,
+                                                               actor_labels = actor_labels,
+                                                               timesteps = timesteps,
+                                                               n_repeat = n_repeat,
+                                                               p_asym = p_asym,
+                                                               clusters = clusters_dichotomize_g_1,
+                                                               quarantine_days = quarantine_days)},
+                              mc.preschedule = TRUE,
+                              mc.cores = cores)
+
+save(run_ABM_no_intervention, run_ABM_isolate_individuals,
+     run_ABM_accounting_for_noise,
+     run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
+     file = "test.run.RData")
+
+# Load libraries ---------------------------------------------------------------
+
+library(ggplot2)
 
 # Load ABM res -----------------------------------------------------------------
 
 setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/")
 load("test.run.RData")
+
+# run_ABM <- run_ABM_no_intervention
+# run_ABM <- run_ABM_isolate_individuals
+# run_ABM <- run_ABM_accounting_for_noise
+# run_ABM <- run_ABM_ignore_noise
+# run_ABM <- run_ABM_dichotomize_g_1
+
 n_trial <- length(run_ABM)
 
 # Average R0 across trials -----------------------------------------------------
@@ -135,6 +208,22 @@ ggplot(data, aes(x = time, y = incidence)) +
     title = "Number of incident cases by time averaged over trials",
     x = "Time (days)",
     y = "Mean Incidence"
+  ) 
+
+# Average quarantined across trials ----------------------------------------------
+
+quarantined <- Reduce("+", lapply(run_ABM, function(x){x$quarantined}))/n_trial
+cat("Estimated max number of quarantined actors:", max(quarantined))
+data <- data.frame(quarantined = quarantined,
+                   time = 1:length(quarantined))
+
+ggplot(data, aes(x = time, y = quarantined)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(
+    title = "Number of quarantined actors by time averaged over trials",
+    x = "Time (days)",
+    y = "Mean number of quarantined actors"
   ) 
 
 # Average interactions per time across trials ----------------------------------
