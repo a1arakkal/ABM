@@ -31,14 +31,32 @@ initialize_actors <- function(actor_names){
 # Function for single run of the ABM
 run_single_ABM <- function(p_infected, mean_exposure_days, 
                            mean_infected_days, actor_labels,
-                           timesteps, n_repeat, 
+                           timesteps, n_repeat, min_degree_t1,
                            p_asym, clusters, quarantine_days){
   
   # initialize actors
   actors <- initialize_actors(actor_labels)
   
   # Randomly select patient 0
-  seed_index <- as.character(sample.int(n = length(actors), size = 1))
+  # seed_index <- as.character(sample.int(n = length(actors), size = 1))
+  # This approach will randomly sample from all actors 1-692. This may cause 
+  # issues as there will be actors who will not interact at time point 1 causing
+  # infection to die out quickly. Specifically about 52.5% dont have interactions
+  # at 1st time point.
+  # (length(int_and_neighbors_by_t[[1]]$n_total)/692)*100
+
+  # we could instead select those with at least x degree at first time point to 
+  # ensure propagation
+  # sum(int_and_neighbors_by_t[[1]]$n_total >= min_degree_t1)
+  
+  if(min_degree_t1 == 0){
+    seed_options <- as.character(1:length(actors))
+  } else {
+    seed_options <- names(which(int_and_neighbors_by_t[[1]]$n_total >= min_degree_t1))
+  }
+
+  seed_index <- seed_options[sample.int(n = length(seed_options), size = 1)]
+  
   actors[[seed_index]]$state <- 2L 
   actors[[seed_index]]$ever_infected <- TRUE
   symptomatic_infection <- runif(1) > p_asym

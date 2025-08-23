@@ -25,7 +25,7 @@ source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/script
 # Parameters ------------------------------------------------------------------
 
 # prob of transmisson among infected
-p_infected <- 0.005
+p_infected <- 0.1
 
 # mean days exposed
 mean_exposure_days <- NULL # NULL is SIR model
@@ -51,10 +51,14 @@ timesteps <- names(int_and_neighbors_by_t)
 # Number of times to repeat weeks of interaction
 n_repeat <- 4 # 2*n_repeat weeks
 
+# Minimum degree for seed options if 0 will randomly select from 1-692
+min_degree_t1 <- 0
+  
 # test <- run_single_ABM(p_infected = p_infected,
 #                        mean_exposure_days = mean_exposure_days,
 #                        mean_infected_days = mean_infected_days,
 #                        actor_labels = actor_labels,
+#                        min_degree_t1 = min_degree_t1,
 #                        timesteps = timesteps,
 #                        n_repeat = n_repeat,
 #                        p_asym = p_asym,
@@ -65,6 +69,7 @@ n_repeat <- 4 # 2*n_repeat weeks
 #                                               mean_exposure_days = mean_exposure_days,
 #                                               mean_infected_days = mean_infected_days,
 #                                               actor_labels = actor_labels,
+#                                               min_degree_t1 = min_degree_t1,
 #                                               timesteps = timesteps,
 #                                               n_repeat = n_repeat,
 #                                               p_asym = p_asym,
@@ -74,7 +79,7 @@ n_repeat <- 4 # 2*n_repeat weeks
 
 # Run ABM for multiple trials --------------------------------------------------
 
-n_trial <- 1e4
+n_trial <- 1e3
 cores <- 100L
 
 ## Run ABM with no intervention 
@@ -84,6 +89,7 @@ run_ABM_no_intervention <- parallel::mclapply(1:n_trial,
                                                                mean_exposure_days = mean_exposure_days, 
                                                                mean_infected_days = mean_infected_days,
                                                                actor_labels = actor_labels,
+                                                               min_degree_t1 = min_degree_t1,
                                                                timesteps = timesteps,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
@@ -166,15 +172,9 @@ library(ggplot2)
 setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/")
 load("test.run.RData")
 
-# run_ABM <- run_ABM_no_intervention
-# run_ABM <- run_ABM_isolate_individuals
-# run_ABM <- run_ABM_accounting_for_noise
-# run_ABM <- run_ABM_ignore_noise
-# run_ABM <- run_ABM_dichotomize_g_1
-
-n_trial <- length(run_ABM)
-
 extract_function <- function(run_ABM){
+  
+  n_trial <- length(run_ABM)
   
   # Average R0 across trials -----------------------------------------------------
   
@@ -312,17 +312,17 @@ extract_function <- function(run_ABM){
   # Average trajectories across trials -------------------------------------------
   
   res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
-  # res_mean <- apply(res_array, c(1,2), mean)
-  # res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
-  # res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
+  res_mean <- apply(res_array, c(1,2), mean)
+  res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
+  res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
   
-  time <- 1:ncol(res_array)
-  compartments <- rownames(res_array)
+  time <- 1:ncol(res_mean)
+  compartments <- rownames(res_mean)
   
   df <- data.frame(
-    time = rep(time, each = nrow(res_array)),
-    Compartment = rep(compartments, times = ncol(res_array)),
-    mean = as.vector(res_array),
+    time = rep(time, each = nrow(res_mean)),
+    Compartment = rep(compartments, times = ncol(res_mean)),
+    mean = as.vector(res_mean),
     lower = as.vector(res_quantile_lower),
     upper = as.vector(res_quantile_upper)
   )
@@ -387,8 +387,27 @@ print.ABM <- function(x,...){
   
 }
 
-extract_function(run_ABM_no_intervention)
-extract_function(run_ABM_isolate_individuals)
-extract_function(run_ABM_ignore_noise)
-extract_function(run_ABM_accounting_for_noise)
-extract_function(run_ABM_dichotomize_g_1)
+plot.ABM <- function(x){
+  
+  available_plots <- names(x$plots)
+  
+  # Prompt user to select a plot
+  choice <- utils::menu(available_plots, title = "Select a plot to view:")
+  
+  if (choice == 0) {
+    message("No plot selected.")
+    return(invisible(NULL))
+  }
+  
+  # Return the chosen plot
+  return(x$plots[[available_plots[choice]]])
+  
+}
+
+no_intervention <- extract_function(run_ABM_no_intervention)
+isolate_individuals <- extract_function(run_ABM_isolate_individuals)
+ignore_noise <- extract_function(run_ABM_ignore_noise)
+accounting_for_noise <- extract_function(run_ABM_accounting_for_noise)
+ABM_dichotomize_g_1 <- extract_function(run_ABM_dichotomize_g_1)
+
+plot.ABM(ignore_noise)
