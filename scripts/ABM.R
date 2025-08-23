@@ -8,6 +8,20 @@ setwd("/Users/atlan/dissertation/real_data_application/paper3/")
 
 load(file = "int_and_neighbors_by_t.RData")
 
+# Load in LSHM results --------------------------------------------
+
+load(file = "cns_week_1_2_res.RData")
+
+clusters_accounting_for_noise <- JANE:::summary.JANE(cns_fits)$cluster_labels
+clusters_ignore_noise <- JANE:::summary.JANE(cns_fits_ignore_noise)$cluster_labels
+clusters_dichotomize_g_1 <- JANE:::summary.JANE(cns_fits_di)$cluster_labels
+
+rm(list = setdiff(ls(), c("int_and_neighbors_by_t",
+                          "total_actors",
+                          "clusters_accounting_for_noise",
+                          "clusters_ignore_noise",
+                          "clusters_dichotomize_g_1")))
+
 # Source helper functions ------------------------------------------------------
 
 source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/scripts/helper_functions.R")
@@ -21,10 +35,19 @@ p_infected <- 0.005
 mean_exposure_days <- NULL # NULL is SIR model
 
 # days infected
-mean_infected_days <- 5L
+mean_infected_days <- c("asymptomatic" = 5L,
+                        "pre_symptomatic" = 2L,
+                        "symptomatic" = 3L)
+
+# prob of being asymptomatic given infected
+p_asym <- 0.2
 
 # Initilize actors
 actor_labels <- 1:total_actors
+
+# Clusters for quarantine
+clusters <- clusters_accounting_for_noise # NULL no intervention
+quarantine_days <- 7 # NULL no intervention
 
 # N time-steps
 timesteps <- names(int_and_neighbors_by_t)
@@ -37,14 +60,20 @@ n_repeat <- 4 # 2*n_repeat weeks
 #                        mean_infected_days = mean_infected_days,
 #                        actor_labels = actor_labels,
 #                        timesteps = timesteps,
-#                        n_repeat = n_repeat)
+#                        n_repeat = n_repeat,
+#                        p_asym = p_asym,
+#                        clusters = clusters,
+#                        quarantine_days = quarantine_days)
 
 # microbenchmark::microbenchmark(run_single_ABM(p_infected = p_infected,
 #                                               mean_exposure_days = mean_exposure_days,
 #                                               mean_infected_days = mean_infected_days,
 #                                               actor_labels = actor_labels,
 #                                               timesteps = timesteps,
-#                                               n_repeat = n_repeat),
+#                                               n_repeat = n_repeat,
+#                                               p_asym = p_asym,
+#                                               clusters = clusters,
+#                                               quarantine_days = quarantine_days),
 # times = 100)
 
 # Run ABM for multiple trials --------------------------------------------------
@@ -57,7 +86,10 @@ run_ABM <- parallel::mclapply(1:n_trial,
                                                                mean_infected_days = mean_infected_days,
                                                                actor_labels = actor_labels,
                                                                timesteps = timesteps,
-                                                               n_repeat = n_repeat)},
+                                                               n_repeat = n_repeat,
+                                                               p_asym = p_asym,
+                                                               clusters = clusters,
+                                                               quarantine_days = quarantine_days)},
                               mc.preschedule = TRUE,
                               mc.cores = 40)
 

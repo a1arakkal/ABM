@@ -1,5 +1,21 @@
+# Load libraries ---------------------------------------------------------------
+
+library(ggplot2)
+
+# Load in interactions by time list --------------------------------------------
+
+setwd("/Users/atlan/dissertation/real_data_application/paper3/")
+
+load(file = "int_and_neighbors_by_t.RData")
+
+# Source helper functions ------------------------------------------------------
+
+source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/scripts/helper_functions.R")
+
+# Parameters ------------------------------------------------------------------
+
 # prob of transmisson among infected
-p_infected <- 0.01
+p_infected <- 0.005
 
 # mean days exposed
 mean_exposure_days <- NULL # NULL is SIR model
@@ -8,205 +24,186 @@ mean_exposure_days <- NULL # NULL is SIR model
 mean_infected_days <- 5L
 
 # Initilize actors
-actors <- initialize_actors(user_values$name)
-
-# collapse 5 min timestamps for intereactions into daily level
-interactions_temp <- cns %>% 
-  distinct(number_timestamp) %>%
-  mutate(new_timestamp = (row_number() - 1) %/% 288 + 1) # each timestamp is 5 mins so 288 timestamps day, subtract 1 as we want groups to be closed on right interval
-# table(cut(1:8064, breaks = c(0, seq(288, 288*4*7, 288)) ))
-
-# tibble with total actor pair interactions by day
-interactions <- interactions_temp %>% 
-  inner_join(cns, ., by = "number_timestamp") %>% 
-  rename(timestamp = new_timestamp) %>% 
-  count(timestamp, user_a, user_b)
-
-interactions <- as.data.frame(interactions)
+actor_labels <- 1:total_actors
 
 # N time-steps
-n_timesteps <- nrow(distinct(interactions, timestamp)) 
+timesteps <- names(int_and_neighbors_by_t)
 
-set.seed(123)
-# randomly seed infection in actor
-seed_index <- as.character(sample.int(n = length(actors), size = 1))
-actors[[seed_index]]$state <- 2L # infected
-actors[[seed_index]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
-actors[[seed_index]]$ever_infected <- T
+# Number of times to repeat weeks of interaction
+n_repeat <- 4 # 2*n_repeat weeks
 
-# Store results
-res <- matrix(NA, nrow = 4, ncol = n_timesteps * 2) # we will just repeat the observed interactions
-incidence <- numeric(n_timesteps * 2) # keep track of new infections by day
+# test <- run_single_ABM(p_infected = p_infected,
+#                        mean_exposure_days = mean_exposure_days,
+#                        mean_infected_days = mean_infected_days,
+#                        actor_labels = actor_labels,
+#                        timesteps = timesteps,
+#                        n_repeat = n_repeat)
 
-k <- 1
-for(R in 1:2){
-  
-  for (t in 1:n_timesteps){
-    
-    # States at time t
-    state_t <- sapply(as.character(1:length(actors)), function(x){actors[[x]]$state})
-    
-    # Who is suspectible at time t
-    sup_t <- which(state_t == 0)
-    
-    # Who is exposed at time t
-    exp_t <- which(state_t == 1)
-    
-    # Who is infected at time t
-    inf_t <- which(state_t == 2)
-    
-    # If everyone recovered break
-    if(length(c(sup_t,exp_t,inf_t)) == 0){
-      break
-    }
-    
-    # Store counts of SEIR
-    res[, k] <- c(length(sup_t), length(exp_t), length(inf_t),  length(actors)- length(c(sup_t,exp_t,inf_t)))
+# microbenchmark::microbenchmark(run_single_ABM(p_infected = p_infected,
+#                                               mean_exposure_days = mean_exposure_days,
+#                                               mean_infected_days = mean_infected_days,
+#                                               actor_labels = actor_labels,
+#                                               timesteps = timesteps,
+#                                               n_repeat = n_repeat),
+# times = 100)
 
-    # Count number of interactions by actor
-    interactions_t <- interactions[interactions$timestamp == t, , drop = F]
-    
-    n_interactions <- tapply(X = c(interactions_t$n, interactions_t$n), 
-                             INDEX = c(interactions_t$user_a, interactions_t$user_b),
-                             FUN = sum)
-    
-    invisible(lapply(names(n_interactions),
-                     function(x){actors[[x]]$n_contacts <- actors[[x]]$n_contacts + n_interactions[[x]]}))
-    
-    # Transmission
-    if( length(sup_t) > 0 & length(inf_t) > 0 ){
-      
-      interaction_w_infect <- ( (interactions_t$user_a %in% inf_t) & (interactions_t$user_b %in% sup_t) ) |  ( (interactions_t$user_b %in% inf_t) & (interactions_t$user_a %in% sup_t) )
-      
-      if(sum(interaction_w_infect)>1){
-        
-        temp <- interactions_t[interaction_w_infect, , drop = F]
-        n_interactions_w_infected <- lapply(inf_t,
-                                            FUN = function(x){
-                                              temp2 <- temp[temp$user_a %in% x |  temp$user_b %in% x, , drop = F]
-                                              temp2 <- tapply(X = c(temp2$n, temp2$n), 
-                                                     INDEX = c(temp2$user_a, temp2$user_b),
-                                                     FUN = sum)
-                                              return(temp2[setdiff(names(temp2), as.character(x))])})
-        
-        total_ints <- tapply(unlist(unname(n_interactions_w_infected)), names(unlist(unname(n_interactions_w_infected))), sum)
-        prob_trans <- 1-(1-p_infected)^total_ints
-        transmission <- runif(length(prob_trans)) < prob_trans
-        
-        # Compute number of new infections THINK!!!!!!!!!!
-        if(k == 1){
-          incidence[k] <- 1
-        } else {
-          incidence[k] <- sum(transmission)
-        }
-      
-        if(any(transmission)){
-          
-          first_gen_interaction <- n_interactions_w_infected[[seed_index]]
-          
-          invisible(lapply(names(which(transmission)),
-                           
-                           function(x){
-                             
-                             actors[[x]]$ever_infected <- T
-                             
-                             if( !is.null(names(first_gen_interaction)) && (x %in% names(first_gen_interaction)) ){
-                  
-                               probs <- sapply(n_interactions_w_infected,
-                                               FUN = function(y){
-                                                 if(x %in% names(y)){
-                                                   temp <- y[[x]]
-                                                   ( (1 - (1-p_infected)^temp) * (1-p_infected)^(total_ints[[x]]-temp) )
-                                                 } else {
-                                                   0
-                                                 }
-                                               })
-                               
-                               probs <- probs/sum(probs)
-                               actors[[x]]$first_gen_infection <- runif(1) < probs[[seed_index]]
-                               
-                             }
-                             
-                             if(is.null(mean_exposure_days)){
-                               
-                               actors[[x]]$state <- 2L
-                               actors[[x]]$duration_infected<- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
-                               
-                             } else {
-                               
-                               actors[[x]]$state <- 1L
-                               actors[[x]]$duration_exposed <- extraDistr::rtpois(n = 1, lambda = mean_exposure_days, a = 0.0)
-                               
-                             }
-                             
-                           }))
-          
-        }
-        
-      }
-      
-    }
-    
-    # update days exposed
-    if(length(exp_t) > 0){
-      
-      invisible(lapply(names(exp_t),
-                       function(x){actors[[x]]$duration_exposed <- actors[[x]]$duration_exposed - 1L}))
-      
-      dur_exposed_t <- sapply(names(exp_t),
-                              function(x){actors[[x]]$duration_exposed})
-      
-      if(any(dur_exposed_t == 0)){
-        
-        invisible(lapply(names(exp_t)[which(dur_exposed_t == 0)],
-                         function(x){
-                           actors[[x]]$state <- 2L
-                           actors[[x]]$duration_infected <- extraDistr::rtpois(n = 1, lambda = mean_infected_days, a = 0.0)
-                         }))
-        
-      }  
-      
-    }
-    
-    # update days infected
-    if(length(inf_t) > 0){
-      
-      invisible(lapply(names(inf_t),
-                       function(x){actors[[x]]$duration_infected <- actors[[x]]$duration_infected - 1L}))
-      
-      dur_infect_t <- sapply(names(inf_t),
-                             function(x){actors[[x]]$duration_infected})
-      
-      if(any(dur_infect_t == 0)){
-        
-        invisible(lapply(names(inf_t)[which(dur_infect_t == 0)],
-                         function(x){
-                           actors[[x]]$state <- 3L
-                         }))
-        
-      }  
-      
-    }
-    
-    # Increment
-    k <- k + 1
-    
-  }
-  
-}
+# Run ABM for multiple trials --------------------------------------------------
+
+n_trial <- 1e4
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM <- parallel::mclapply(1:n_trial,
+                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                               mean_exposure_days = mean_exposure_days, 
+                                                               mean_infected_days = mean_infected_days,
+                                                               actor_labels = actor_labels,
+                                                               timesteps = timesteps,
+                                                               n_repeat = n_repeat)},
+                              mc.preschedule = TRUE,
+                              mc.cores = 40)
+
+save(run_ABM, file = "test.run.RData")
+
+# Load ABM res -----------------------------------------------------------------
+
+setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/")
+load("test.run.RData")
+n_trial <- length(run_ABM)
+
+# Average R0 across trials -----------------------------------------------------
+
+R0 <- sapply(run_ABM, function(x){x$R0})
+cat("Estimated R0:", mean(R0))
+quantile(R0, probs = c(0.025,0.975))
+boxplot(R0)
+
+# Introducing exposure days can increase R0 as the seed will have
+# to compete with fewer infectious agents at a given t thus more likely to have 
+# 1st gen infections. But in the limit of exposure days it should give most 
+# accurate estimate of R0 as only infectious agent will be seed and all
+# infections will be 1st gen.
+
+# Average acttack across trials ------------------------------------------------
+
+attack_rate <- sapply(run_ABM, function(x){x$attack_rate})
+mean(attack_rate)
+quantile(attack_rate, probs = c(0.025,0.975))
+boxplot(attack_rate)
+
+# Average incidence across trials ----------------------------------------------
+
+incidence <- Reduce("+", lapply(run_ABM, function(x){x$incidence}))/n_trial
+cat("Estimated max number of incident cases:", max(incidence))
+data <- data.frame(incidence = incidence,
+           time = 1:length(incidence))
+
+ggplot(data, aes(x = time, y = incidence)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(
+    title = "Number of incident cases by time averaged over trials",
+    x = "Time (days)",
+    y = "Mean Incidence"
+  ) 
+
+# Average interactions per time across trials ----------------------------------
+
+average_interactions_by_time <- Reduce("+", lapply(run_ABM, function(x){x$average_interactions_by_time}))/n_trial
+data <- data.frame(incidence = average_interactions_by_time,
+                   time = 1:length(average_interactions_by_time))
+
+ggplot(data, aes(x = time, y = average_interactions_by_time)) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(7, 56, 7),
+                     labels = c(1:8)) +
+  labs(
+    title = "Average number of interactions per actor by time averaged over trials",
+    x = "Time (weeks)",
+    y = "Mean number of interactions"
+  ) 
+
+# Check
+# interactions %>%
+#   filter(timestamp>14) %>%
+#   group_by(timestamp) %>%
+#   summarise(ave = 2*sum(n)/692,
+#             n_int = sum(n),
+#             den = n_int/((total_actors*(total_actors-1))*0.5),
+#             ave2 = den*691) %>%
+#   ggplot(aes(x = timestamp, y = ave)) +
+#   geom_line(size = 1) +
+#   theme_minimal() +
+#   labs(
+#     title = "Average number of interactions by time averaged over trials",
+#     x = "Time (weeks)",
+#     y = "Mean number of interactions"
+#   )
+# 
+# interactions %>%
+#   filter(timestamp>14) %>% 
+#   nest(data = c(user_a, user_b, n), .by = timestamp) %>% 
+#   mutate(ave = map_dbl(data,
+#                         ~{select(.x, actor = user_a, n) %>% 
+#                             bind_rows(select(.x, actor = user_b, n)) %>% 
+#                             group_by(actor) %>% 
+#                             summarise(total = sum(n)) %>% 
+#                             ungroup() %>% 
+#                             summarise(ave = sum(total)/692) %>% .$ave})) %>% 
+#   ggplot(aes(x = timestamp, y = ave)) +
+#   geom_line(size = 1) +
+#   theme_minimal() +
+#   labs(
+#     title = "Average number of interactions by time averaged over trials",
+#     x = "Time (weeks)",
+#     y = "Mean number of interactions"
+#   )
+# 
+# plot(sapply(int_and_neighbors_by_t, function(x) sum(x$n_total_t)/total_actors), type = "l")
 
 
+# Average cumulative interaction across trials ---------------------------------
 
-plot(x = 1:ncol(res), y = res[1,], type = "l", col = "red", ylim = c(0,692))
-lines(x = 1:ncol(res), y = res[3,], col = "black")
-lines(x = 1:ncol(res), y = res[4,], col = "blue")
+average_cumulative_interactions_per_actor <- Reduce("+", lapply(run_ABM, function(x){x$average_cumulative_interactions_per_actor}))/n_trial
+cat("Estimated average cumulative number of interactions per actor:", average_cumulative_interactions_per_actor)
 
-max(incidence)
+# # Check
+# interactions %>%
+#   filter(timestamp>14) %>% 
+#   select(actor = user_a, n) %>% 
+#   bind_rows(interactions %>%
+#               filter(timestamp>14) %>% 
+#               select(actor = user_b, n)) %>% 
+#   group_by(actor) %>% 
+#   summarise(total = sum(n)) %>% 
+#   ungroup() %>% 
+#   summarise(sum(total)*4/692) # times 4 as we duplicated the 2 weeks 4 times
 
-mean(sapply(names(actors),
-            function(x){actors[[x]]$ever_infected}))
+# Average trajectories across trials -------------------------------------------
 
-sum(sapply(names(actors),
-            function(x){actors[[x]]$first_gen_infection}), na.rm = T)
+res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
+res_mean <- apply(res_array, c(1,2), mean)
+res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
+res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
 
+time <- 1:ncol(res_mean)
+compartments <- rownames(res_mean)
 
+df <- data.frame(
+  time = rep(time, each = nrow(res_mean)),
+  Compartment = rep(compartments, times = ncol(res_mean)),
+  mean = as.vector(res_mean),
+  lower = as.vector(res_quantile_lower),
+  upper = as.vector(res_quantile_upper)
+)
+
+ggplot(df, aes(x = time, y = mean, color = Compartment, fill = Compartment)) +
+  # geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
+  geom_line(size = 1) +
+  theme_minimal() +
+  labs(
+    title = "ABM trajectories averaged over trials",
+    x = "Time",
+    y = "Mean number of actors"
+  ) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1")
