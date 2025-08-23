@@ -331,7 +331,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                         function(x){actors[[x]]$ever_infected})),
               quarantined_rate = mean(sapply(names(actors),
                                         function(x){actors[[x]]$ever_quarantined})),
-              R0 = sum(lapply(names(actors),
+              R0 = sum(sapply(names(actors),
                               function(x){actors[[x]]$first_gen_infection}), na.rm = T)))
   
 }
