@@ -174,157 +174,221 @@ load("test.run.RData")
 
 n_trial <- length(run_ABM)
 
-# Average R0 across trials -----------------------------------------------------
+extract_function <- function(run_ABM){
+  
+  # Average R0 across trials -----------------------------------------------------
+  
+  R0 <- sapply(run_ABM, function(x){x$R0})
+  # cat("Estimated R0:", mean(R0))
+  # quantile(R0, probs = c(0.025,0.975))
+  # boxplot(R0)
+  
+  # Introducing exposure days can increase R0 as the seed will have
+  # to compete with fewer infectious agents at a given t thus more likely to have 
+  # 1st gen infections. But in the limit of exposure days it should give most 
+  # accurate estimate of R0 as only infectious agent will be seed and all
+  # infections will be 1st gen.
+  
+  # Average attack across trials ------------------------------------------------
+  
+  attack_rate <- sapply(run_ABM, function(x){x$attack_rate})
+  # mean(attack_rate)
+  # quantile(attack_rate, probs = c(0.025,0.975))
+  # boxplot(attack_rate)
+  
+  # Average quarantine across trials ------------------------------------------------
+  
+  quarantined_rate <- sapply(run_ABM, function(x){x$quarantined_rate})
+  # mean(quarantined_rate)
+  # quantile(quarantined_rate, probs = c(0.025,0.975))
+  # boxplot(quarantined_rate)
+  
+  # Average incidence across trials ----------------------------------------------
+  
+  incidence <- Reduce("+", lapply(run_ABM, function(x){x$incidence}))/n_trial
+  incidence_max <- do.call("c", lapply(run_ABM, function(x){max(x$incidence)}))
+  # cat("Estimated max number of incident cases:", max(incidence))
+  data <- data.frame(incidence = incidence,
+                     time = 1:length(incidence))
+  
+  incident_cases_plot <- ggplot(data, aes(x = time, y = incidence)) +
+    geom_line(size = 1) +
+    theme_minimal() +
+    labs(
+      title = "Number of incident cases by time averaged over trials",
+      x = "Time (days)",
+      y = "Mean Incidence"
+    ) 
+  
+  # Average quarantined across trials ----------------------------------------------
+  
+  quarantined <- Reduce("+", lapply(run_ABM, function(x){x$quarantined}))/n_trial
+  quarantined_max <- do.call("c", lapply(run_ABM, function(x){max(x$quarantined)}))
+  data <- data.frame(quarantined = quarantined,
+                     time = 1:length(quarantined))
+  
+  quarantined_plot <- ggplot(data, aes(x = time, y = quarantined)) +
+    geom_line(size = 1) +
+    theme_minimal() +
+    labs(
+      title = "Number of quarantined actors by time averaged over trials",
+      x = "Time (days)",
+      y = "Mean number of quarantined actors"
+    ) 
+  
+  # Average interactions per time across trials ----------------------------------
+  
+  average_interactions_by_time <- Reduce("+", lapply(run_ABM, function(x){x$average_interactions_by_time}))/n_trial
+  data <- data.frame(incidence = average_interactions_by_time,
+                     time = 1:length(average_interactions_by_time))
+  
+  average_interactions_plot <- ggplot(data, aes(x = time, y = average_interactions_by_time)) +
+    geom_line(size = 1) +
+    theme_minimal() +
+    scale_x_continuous(breaks = seq(7, 56, 7),
+                       labels = c(1:8)) +
+    labs(
+      title = "Average number of interactions per actor by time averaged over trials",
+      x = "Time (weeks)",
+      y = "Mean number of interactions"
+    ) 
+  
+  # Check
+  # interactions %>%
+  #   filter(timestamp>14) %>%
+  #   group_by(timestamp) %>%
+  #   summarise(ave = 2*sum(n)/692,
+  #             n_int = sum(n),
+  #             den = n_int/((total_actors*(total_actors-1))*0.5),
+  #             ave2 = den*691) %>%
+  #   ggplot(aes(x = timestamp, y = ave)) +
+  #   geom_line(size = 1) +
+  #   theme_minimal() +
+  #   labs(
+  #     title = "Average number of interactions by time averaged over trials",
+  #     x = "Time (weeks)",
+  #     y = "Mean number of interactions"
+  #   )
+  # 
+  # interactions %>%
+  #   filter(timestamp>14) %>% 
+  #   nest(data = c(user_a, user_b, n), .by = timestamp) %>% 
+  #   mutate(ave = map_dbl(data,
+  #                         ~{select(.x, actor = user_a, n) %>% 
+  #                             bind_rows(select(.x, actor = user_b, n)) %>% 
+  #                             group_by(actor) %>% 
+  #                             summarise(total = sum(n)) %>% 
+  #                             ungroup() %>% 
+  #                             summarise(ave = sum(total)/692) %>% .$ave})) %>% 
+  #   ggplot(aes(x = timestamp, y = ave)) +
+  #   geom_line(size = 1) +
+  #   theme_minimal() +
+  #   labs(
+  #     title = "Average number of interactions by time averaged over trials",
+  #     x = "Time (weeks)",
+  #     y = "Mean number of interactions"
+  #   )
+  # 
+  # plot(sapply(int_and_neighbors_by_t, function(x) sum(x$n_total_t)/total_actors), type = "l")
+  
+  
+  # Average cumulative interaction across trials ---------------------------------
+  
+  average_cumulative_interactions_per_actor <- do.call("c", lapply(run_ABM, function(x){x$average_cumulative_interactions_per_actor}))
+  # cat("Estimated average cumulative number of interactions per actor:", average_cumulative_interactions_per_actor)
+  
+  # # Check
+  # interactions %>%
+  #   filter(timestamp>14) %>% 
+  #   select(actor = user_a, n) %>% 
+  #   bind_rows(interactions %>%
+  #               filter(timestamp>14) %>% 
+  #               select(actor = user_b, n)) %>% 
+  #   group_by(actor) %>% 
+  #   summarise(total = sum(n)) %>% 
+  #   ungroup() %>% 
+  #   summarise(sum(total)*4/692) # times 4 as we duplicated the 2 weeks 4 times
+  
+  # Average trajectories across trials -------------------------------------------
+  
+  res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
+  # res_mean <- apply(res_array, c(1,2), mean)
+  # res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
+  # res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
+  
+  time <- 1:ncol(res_array)
+  compartments <- rownames(res_array)
+  
+  df <- data.frame(
+    time = rep(time, each = nrow(res_array)),
+    Compartment = rep(compartments, times = ncol(res_array)),
+    mean = as.vector(res_array),
+    lower = as.vector(res_quantile_lower),
+    upper = as.vector(res_quantile_upper)
+  )
+  
+  ABM_plot <- ggplot(df, aes(x = time, y = mean, color = Compartment, fill = Compartment)) +
+    # geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
+    geom_line(size = 1) +
+    theme_minimal() +
+    labs(
+      title = "ABM trajectories averaged over trials",
+      x = "Time",
+      y = "Mean number of actors"
+    ) +
+    scale_color_brewer(palette = "Set1") +
+    scale_fill_brewer(palette = "Set1")
+  
+  return(structure(list(R0 = R0,
+                        attack_rate = attack_rate,
+                        incidence_max = incidence_max,
+                        quarantined_rate = quarantined_rate,
+                        quarantined_max = quarantined_max,
+                        average_interactions_by_time = average_interactions_by_time,
+                        average_cumulative_interactions_per_actor = average_cumulative_interactions_per_actor,
+                        plots = list(ABM_plot = ABM_plot,
+                                     average_interactions_plot = average_interactions_plot,
+                                     quarantined_plot = quarantined_plot,
+                                     incident_cases_plot = incident_cases_plot)), class = "ABM"))
+  
+}
 
-R0 <- sapply(run_ABM, function(x){x$R0})
-cat("Estimated R0:", mean(R0))
-quantile(R0, probs = c(0.025,0.975))
-boxplot(R0)
+print.ABM <- function(x,...){
+  
+  cat("Estimated R0:\n")
+  cat("   Mean:", mean(x$R0), "\n")
+  cat("   Median:", median(x$R0), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$R0, probs = c(0.025,0.975)), "\n\n")
+  
+  cat("Estimated attack rate:\n")
+  cat("   Mean:", mean(x$attack_rate), "\n")
+  cat("   Median:", median(x$attack_rate), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$attack_rate, probs = c(0.025,0.975)), "\n\n")
+  
+  cat("Estimated max number of daily incident cases:\n")
+  cat("   Mean:", mean(x$incidence_max), "\n")
+  cat("   Median:", median(x$incidence_max), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$incidence_max, probs = c(0.025,0.975)), "\n\n")
+  
+  cat("Estimated quarantined rate:\n")
+  cat("   Mean:", mean(x$quarantined_rate), "\n")
+  cat("   Median:", median(x$quarantined_rate), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$quarantined_rate, probs = c(0.025,0.975)), "\n\n")
+  
+  cat("Estimated max number of quarantined actors:\n")
+  cat("   Mean:", mean(x$quarantined_max), "\n")
+  cat("   Median:", median(x$quarantined_max), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$quarantined_max, probs = c(0.025,0.975)), "\n\n")
+ 
+  cat("Estimated average cumulative number of interactions per actor over length of ABM:\n")
+  cat("   Mean:", mean(x$average_cumulative_interactions_per_actor), "\n")
+  cat("   Median:", median(x$quarantaverage_cumulative_interactions_per_actorined), "\n")
+  cat("   (2.5%, 97.5%) percentile:", quantile(x$average_cumulative_interactions_per_actor, probs = c(0.025,0.975)), "\n\n")
+  
+}
 
-# Introducing exposure days can increase R0 as the seed will have
-# to compete with fewer infectious agents at a given t thus more likely to have 
-# 1st gen infections. But in the limit of exposure days it should give most 
-# accurate estimate of R0 as only infectious agent will be seed and all
-# infections will be 1st gen.
-
-# Average acttack across trials ------------------------------------------------
-
-attack_rate <- sapply(run_ABM, function(x){x$attack_rate})
-mean(attack_rate)
-quantile(attack_rate, probs = c(0.025,0.975))
-boxplot(attack_rate)
-
-# Average incidence across trials ----------------------------------------------
-
-incidence <- Reduce("+", lapply(run_ABM, function(x){x$incidence}))/n_trial
-cat("Estimated max number of incident cases:", max(incidence))
-data <- data.frame(incidence = incidence,
-           time = 1:length(incidence))
-
-ggplot(data, aes(x = time, y = incidence)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(
-    title = "Number of incident cases by time averaged over trials",
-    x = "Time (days)",
-    y = "Mean Incidence"
-  ) 
-
-# Average quarantined across trials ----------------------------------------------
-
-quarantined <- Reduce("+", lapply(run_ABM, function(x){x$quarantined}))/n_trial
-cat("Estimated max number of quarantined actors:", max(quarantined))
-data <- data.frame(quarantined = quarantined,
-                   time = 1:length(quarantined))
-
-ggplot(data, aes(x = time, y = quarantined)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(
-    title = "Number of quarantined actors by time averaged over trials",
-    x = "Time (days)",
-    y = "Mean number of quarantined actors"
-  ) 
-
-# Average interactions per time across trials ----------------------------------
-
-average_interactions_by_time <- Reduce("+", lapply(run_ABM, function(x){x$average_interactions_by_time}))/n_trial
-data <- data.frame(incidence = average_interactions_by_time,
-                   time = 1:length(average_interactions_by_time))
-
-ggplot(data, aes(x = time, y = average_interactions_by_time)) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  scale_x_continuous(breaks = seq(7, 56, 7),
-                     labels = c(1:8)) +
-  labs(
-    title = "Average number of interactions per actor by time averaged over trials",
-    x = "Time (weeks)",
-    y = "Mean number of interactions"
-  ) 
-
-# Check
-# interactions %>%
-#   filter(timestamp>14) %>%
-#   group_by(timestamp) %>%
-#   summarise(ave = 2*sum(n)/692,
-#             n_int = sum(n),
-#             den = n_int/((total_actors*(total_actors-1))*0.5),
-#             ave2 = den*691) %>%
-#   ggplot(aes(x = timestamp, y = ave)) +
-#   geom_line(size = 1) +
-#   theme_minimal() +
-#   labs(
-#     title = "Average number of interactions by time averaged over trials",
-#     x = "Time (weeks)",
-#     y = "Mean number of interactions"
-#   )
-# 
-# interactions %>%
-#   filter(timestamp>14) %>% 
-#   nest(data = c(user_a, user_b, n), .by = timestamp) %>% 
-#   mutate(ave = map_dbl(data,
-#                         ~{select(.x, actor = user_a, n) %>% 
-#                             bind_rows(select(.x, actor = user_b, n)) %>% 
-#                             group_by(actor) %>% 
-#                             summarise(total = sum(n)) %>% 
-#                             ungroup() %>% 
-#                             summarise(ave = sum(total)/692) %>% .$ave})) %>% 
-#   ggplot(aes(x = timestamp, y = ave)) +
-#   geom_line(size = 1) +
-#   theme_minimal() +
-#   labs(
-#     title = "Average number of interactions by time averaged over trials",
-#     x = "Time (weeks)",
-#     y = "Mean number of interactions"
-#   )
-# 
-# plot(sapply(int_and_neighbors_by_t, function(x) sum(x$n_total_t)/total_actors), type = "l")
-
-
-# Average cumulative interaction across trials ---------------------------------
-
-average_cumulative_interactions_per_actor <- Reduce("+", lapply(run_ABM, function(x){x$average_cumulative_interactions_per_actor}))/n_trial
-cat("Estimated average cumulative number of interactions per actor:", average_cumulative_interactions_per_actor)
-
-# # Check
-# interactions %>%
-#   filter(timestamp>14) %>% 
-#   select(actor = user_a, n) %>% 
-#   bind_rows(interactions %>%
-#               filter(timestamp>14) %>% 
-#               select(actor = user_b, n)) %>% 
-#   group_by(actor) %>% 
-#   summarise(total = sum(n)) %>% 
-#   ungroup() %>% 
-#   summarise(sum(total)*4/692) # times 4 as we duplicated the 2 weeks 4 times
-
-# Average trajectories across trials -------------------------------------------
-
-res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
-res_mean <- apply(res_array, c(1,2), mean)
-res_quantile_lower <- apply(res_array, c(1,2), quantile, probs = 0.025)
-res_quantile_upper<- apply(res_array, c(1,2), quantile, probs = 0.975)
-
-time <- 1:ncol(res_mean)
-compartments <- rownames(res_mean)
-
-df <- data.frame(
-  time = rep(time, each = nrow(res_mean)),
-  Compartment = rep(compartments, times = ncol(res_mean)),
-  mean = as.vector(res_mean),
-  lower = as.vector(res_quantile_lower),
-  upper = as.vector(res_quantile_upper)
-)
-
-ggplot(df, aes(x = time, y = mean, color = Compartment, fill = Compartment)) +
-  # geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2, color = NA) +
-  geom_line(size = 1) +
-  theme_minimal() +
-  labs(
-    title = "ABM trajectories averaged over trials",
-    x = "Time",
-    y = "Mean number of actors"
-  ) +
-  scale_color_brewer(palette = "Set1") +
-  scale_fill_brewer(palette = "Set1")
+extract_function(run_ABM_no_intervention)
+extract_function(run_ABM_isolate_individuals)
+extract_function(run_ABM_ignore_noise)
+extract_function(run_ABM_accounting_for_noise)
+extract_function(run_ABM_dichotomize_g_1)
