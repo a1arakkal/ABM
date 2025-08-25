@@ -63,7 +63,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   
   if(symptomatic_infection){
     
-    durations <- c(rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1,
+    durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
+                          rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
                    rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
     
     actors[[seed_index]]$duration_infected <- c(durations[1], sum(durations))
@@ -119,11 +120,25 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       # remove interations for those quarantined
       if(length(qua_t) > 0){
         int_and_neighbors_t$neighbors <- int_and_neighbors_t$neighbors[setdiff(names(int_and_neighbors_t$neighbors), qua_t)] 
-        int_and_neighbors_t$neighbors <- lapply(int_and_neighbors_t$neighbors,
+        # test <- lapply(int_and_neighbors_t$neighbors,
+        #                                         FUN = function(x){
+        #                                           x[setdiff(names(x), qua_t)]
+        #                                         })
+
+        temp <- lapply(int_and_neighbors_t$neighbors,
                                                 FUN = function(x){
-                                                  x[setdiff(names(x), qua_t)]
+                                                  p1 <- x[setdiff(names(x), qua_t)] # remove the interactions with quarantined actors
+                                                  p2 <- sum(p1) # total interactions excluding quarantined actors
+                                                  return(list(p1 = p1,
+                                                              p2 = p2))
                                                 })
-        int_and_neighbors_t$n_total_t <- int_and_neighbors_t$n_total_t[setdiff(names(int_and_neighbors_t$n_total_t), qua_t)] 
+
+        int_and_neighbors_t$neighbors <- lapply(temp,
+                                                FUN = function(x){x$p1})
+        
+        int_and_neighbors_t$n_total_t <- sapply(temp,
+                                                FUN = function(x){x$p2})
+        
       }
       
       # Store counts of SEIR
@@ -198,7 +213,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                    
                                    if(symptomatic_inf){
                                      
-                                     durations <- c(rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1,
+                                     durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
+                                                           rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
                                                     rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
                                      
                                      actors[[x]]$duration_infected <- c(durations[1], sum(durations))
@@ -245,7 +261,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                              
                              if(symptomatic_inf){
                                
-                               durations <- c(rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1,
+                               durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
+                                                     rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
                                               rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
                                
                                actors[[x]]$duration_infected <- c(durations[1], sum(durations))
@@ -297,7 +314,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
         dur_symptom_infect_t <- sapply(inf_t,
                                        function(x){ (abs(diff(actors[[x]]$duration_infected)) > 0) && actors[[x]]$duration_infected[1] == 0})
         
-        symptom_infect_t <- inf_t[dur_symptom_infect_t]
+        symptom_infect_t <- inf_t[unname(dur_symptom_infect_t)]
           
         if(length(symptom_infect_t) > 0){
           
