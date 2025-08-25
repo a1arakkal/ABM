@@ -145,13 +145,15 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       # Store counts of SEIR
       res[, k] <- c(length(sup_t), length(exp_t), length(inf_t), length(actors) - length(c(sup_t, exp_t, inf_t)))
       
-      # Count number of interactions by actor
-      n_interactions <- int_and_neighbors_t$n_total_t
-      average_interaction[k] <- sum(n_interactions)/length(actors) # not just mean(n_interactions) as we want to include the 0's
-      
-      # Update cumulative number of interactions per actor
-      invisible(lapply(names(n_interactions),
-                       function(x){actors[[x]]$n_contacts <- actors[[x]]$n_contacts + n_interactions[[x]]}))
+      if(length(int_and_neighbors_t$neighbors) > 0){
+        # Count number of interactions by actor
+        n_interactions <- int_and_neighbors_t$n_total_t
+        average_interaction[k] <- sum(n_interactions)/length(actors) # not just mean(n_interactions) as we want to include the 0's
+        
+        # Update cumulative number of interactions per actor
+        invisible(lapply(names(n_interactions),
+                         function(x){actors[[x]]$n_contacts <- actors[[x]]$n_contacts + n_interactions[[x]]}))
+      }
       
       # Transmission
       if( length(sup_t) > 0 & length(inf_t) > 0 ){
