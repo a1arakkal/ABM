@@ -124,21 +124,22 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
         #                                         FUN = function(x){
         #                                           x[setdiff(names(x), qua_t)]
         #                                         })
-
-        temp <- lapply(int_and_neighbors_t$neighbors,
-                                                FUN = function(x){
-                                                  p1 <- x[setdiff(names(x), qua_t)] # remove the interactions with quarantined actors
-                                                  p2 <- sum(p1) # total interactions excluding quarantined actors
-                                                  return(list(p1 = p1,
-                                                              p2 = p2))
-                                                })
-
-        int_and_neighbors_t$neighbors <- lapply(temp,
-                                                FUN = function(x){x$p1})
         
-        int_and_neighbors_t$n_total_t <- vapply(temp,
-                                                FUN = function(x){x$p2}, numeric(1))
-        
+        if(length(int_and_neighbors_t$neighbors) > 0){
+          temp <- lapply(int_and_neighbors_t$neighbors,
+                         FUN = function(x){
+                           p1 <- x[setdiff(names(x), qua_t)] # remove the interactions with quarantined actors
+                           p2 <- sum(p1) # total interactions excluding quarantined actors
+                           return(list(p1 = p1,
+                                       p2 = p2))
+                         })
+          
+          int_and_neighbors_t$neighbors <- lapply(temp,
+                                                  FUN = function(x){x$p1})
+          
+          int_and_neighbors_t$n_total_t <- sapply(temp,
+                                                  FUN = function(x){x$p2})
+        }
       }
       
       # Store counts of SEIR
