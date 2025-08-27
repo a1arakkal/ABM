@@ -31,12 +31,12 @@ p_infected <- 0.005
 mean_exposure_days <- NULL # NULL is SIR model
 
 # days infected
-mean_infected_days <- c("asymptomatic" = 5L,
-                        "pre_symptomatic" = 2L, # if 0 not pre_symptomatic period
-                        "symptomatic" = 3L)
+mean_infected_days <- c("asymptomatic" = 10L,
+                        "pre_symptomatic" = 5L, # if 0 not pre_symptomatic period
+                        "symptomatic" = 5L)
 
 # prob of being asymptomatic given infected
-p_asym <- 0.1 # if 0 all infections are symptomatic
+p_asym <- 0.6 # if 0 all infections are symptomatic
 
 # Initilize actors
 actor_labels <- 1:total_actors
@@ -54,6 +54,9 @@ n_repeat <- 4 # 2*n_repeat weeks
 # Minimum degree for seed options if 0 will randomly select from 1-692
 min_degree_t1 <- 0
   
+# How far to look back for digital contact tracing if used as intervention inclusive of current day
+digital_contact_tracing_look_back <- 4
+
 # test <- run_single_ABM(p_infected = p_infected,
 #                        mean_exposure_days = mean_exposure_days,
 #                        mean_infected_days = mean_infected_days,
@@ -94,7 +97,8 @@ run_ABM_no_intervention <- parallel::mclapply(1:n_trial,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
                                                                clusters = NULL,
-                                                               quarantine_days = quarantine_days)},
+                                                               quarantine_days = quarantine_days,
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -109,8 +113,9 @@ run_ABM_isolate_individuals <- parallel::mclapply(1:n_trial,
                                                                                timesteps = timesteps,
                                                                                n_repeat = n_repeat,
                                                                                p_asym = p_asym,
-                                                                               clusters = 1,
-                                                                               quarantine_days = quarantine_days)},
+                                                                               clusters = 1, # if vector of length 1 will used digital contact tracing approach 
+                                                                               quarantine_days = quarantine_days,
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
 
@@ -126,7 +131,8 @@ run_ABM_accounting_for_noise <- parallel::mclapply(1:n_trial,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
                                                                clusters = clusters_accounting_for_noise,
-                                                               quarantine_days = quarantine_days)},
+                                                               quarantine_days = quarantine_days,
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -142,7 +148,8 @@ run_ABM_ignore_noise <- parallel::mclapply(1:n_trial,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
                                                                clusters = clusters_ignore_noise,
-                                                               quarantine_days = quarantine_days)},
+                                                               quarantine_days = quarantine_days,
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -158,7 +165,8 @@ run_ABM_dichotomize_g_1 <- parallel::mclapply(1:n_trial,
                                                                n_repeat = n_repeat,
                                                                p_asym = p_asym,
                                                                clusters = clusters_dichotomize_g_1,
-                                                               quarantine_days = quarantine_days)},
+                                                               quarantine_days = quarantine_days,
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 

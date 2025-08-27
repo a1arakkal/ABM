@@ -32,7 +32,8 @@ initialize_actors <- function(actor_names){
 run_single_ABM <- function(p_infected, mean_exposure_days, 
                            mean_infected_days, actor_labels,
                            timesteps, n_repeat, min_degree_t1,
-                           p_asym, clusters, quarantine_days){
+                           p_asym, clusters, quarantine_days,
+                           digital_contact_tracing_look_back){
   
   # initialize actors
   actors <- initialize_actors(actor_labels)
@@ -64,14 +65,14 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   if(symptomatic_infection){
     
     durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
-                          rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
-                   rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
+                          extraDistr::rtpois(n = 1, lambda = mean_infected_days[["pre_symptomatic"]], a = 0)),
+                   extraDistr::rtpois(n = 1, lambda = mean_infected_days[["symptomatic"]], a = 0))
     
     actors[[seed_index]]$duration_infected <- c(durations[1], sum(durations))
     
   } else{
     
-    actors[[seed_index]]$duration_infected <- rep(rgeom(n = 1, p = 1/mean_infected_days[["asymptomatic"]]) + 1, 2)
+    actors[[seed_index]]$duration_infected <- rep(extraDistr::rtpois(n = 1, lambda = mean_infected_days[["asymptomatic"]], a = 0), 2)
     
   }
  
@@ -217,21 +218,21 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                    if(symptomatic_inf){
                                      
                                      durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
-                                                           rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
-                                                    rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
+                                                           extraDistr::rtpois(n = 1, lambda = mean_infected_days[["pre_symptomatic"]], a = 0)),
+                                                    extraDistr::rtpois(n = 1, lambda = mean_infected_days[["symptomatic"]], a = 0))
                                      
                                      actors[[x]]$duration_infected <- c(durations[1], sum(durations))
                                      
                                    } else{
                                      
-                                     actors[[x]]$duration_infected <- rep(rgeom(n = 1, p = 1/mean_infected_days[["asymptomatic"]]) + 1, 2)
+                                     actors[[x]]$duration_infected <- rep(extraDistr::rtpois(n = 1, lambda = mean_infected_days[["asymptomatic"]], a = 0), 2)
                                      
                                    }
                                    
                                  } else {
                                    
                                    actors[[x]]$state <- 1L
-                                   actors[[x]]$duration_exposed <- rgeom(n = 1, p = 1/mean_exposure_days) + 1
+                                   actors[[x]]$duration_exposed <- extraDistr::rtpois(n = 1, lambda = mean_exposure_days, a = 0)
                                    
                                  }
                                  
@@ -265,14 +266,14 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                              if(symptomatic_inf){
                                
                                durations <- c(ifelse(mean_infected_days[["pre_symptomatic"]] == 0, 0,
-                                                     rgeom(n = 1, p = 1/mean_infected_days[["pre_symptomatic"]]) + 1),
-                                              rgeom(n = 1, p = 1/mean_infected_days[["symptomatic"]]) + 1)
+                                                     extraDistr::rtpois(n = 1, lambda = mean_infected_days[["pre_symptomatic"]], a = 0)),
+                                              extraDistr::rtpois(n = 1, lambda = mean_infected_days[["symptomatic"]], a = 0))
                                
                                actors[[x]]$duration_infected <- c(durations[1], sum(durations))
                                
                              } else{
                                
-                               actors[[x]]$duration_infected <- rep(rgeom(n = 1, p = 1/mean_infected_days[["asymptomatic"]]) + 1, 2)
+                               actors[[x]]$duration_infected <- rep(extraDistr::rtpois(n = 1, lambda = mean_infected_days[["asymptomatic"]], a = 0), 2)
                                
                              }
                            }))
@@ -321,6 +322,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           
         if(length(symptom_infect_t) > 0){
           
+          if(length(clusters) > 1){
+          
           # Find those in the same cluster as symtomatic actors
           
           ## Find those that are in a cluster
@@ -336,9 +339,23 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           quarantine_in_cluster <- names(clusters[clusters %in% cluster_infected])
           
           ## Quarantine actors include both those in an infected cluster and isolates
-          quarantine <- c(quarantine_in_cluster,
-                          symptom_infect_t_not_in_cluster) # deals with isolates that are removed from LSHM implementation
+          quarantine <- unique(c(quarantine_in_cluster,
+                                 symptom_infect_t_not_in_cluster)) # deals with isolates that are removed from LSHM implementation
+          
+          } else {
             
+            # Find 1 hop neighbors of symptom_infect_t during [max(t-digital_contact_tracing_look_back, 1), t]
+            index_current <- which(names(int_and_neighbors_by_t) == t)
+            one_hop <- unique(unlist(lapply(int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
+                                            FUN = function(x){unique(names(unlist(unname(x$neighbors[symptom_infect_t]))))}),
+                                     use.names = FALSE))
+            
+            ## Quarantine actors include those infected and their one-hop neighbors
+            quarantine <- unique(c(one_hop,
+                                   symptom_infect_t)) 
+            
+          }
+          
           # Exclude those already in quarantine
           quarantine <- setdiff(quarantine, qua_t)
           
