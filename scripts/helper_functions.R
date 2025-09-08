@@ -87,6 +87,9 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   # initialize counter
   k <- 1
   
+  # make copy of int_and_neighbors_by_t will be of length n_timesteps * n_repeat
+  copy_int_and_neighbors_by_t <- rep(int_and_neighbors_by_t, n_repeat)
+  
   # For loop number of time to repeat weeks
   for(R in 1:n_repeat){
     
@@ -141,6 +144,10 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           int_and_neighbors_t$n_total_t <- sapply(temp,
                                                   FUN = function(x){x$p2})
         }
+        
+        copy_int_and_neighbors_by_t[[k]]$neighbors <- int_and_neighbors_t$neighbors
+        copy_int_and_neighbors_by_t[[k]]$n_total_t <- int_and_neighbors_t$n_total_t
+        
       }
       
       # Store counts of SEIR
@@ -312,13 +319,17 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       }
       
       # Implement intervention
-      if(!is.null(clusters) && length(inf_t) > 0){
+      potential_qua_t <- setdiff(inf_t, qua_t) #check if infected is already quarantined
+      
+      if(!is.null(clusters) && length(potential_qua_t) > 0){ 
         
         # Find those who have >0 symptomatic infectious days and done with asymtomatic period
-        dur_symptom_infect_t <- sapply(inf_t,
+        dur_symptom_infect_t <- sapply(potential_qua_t,
                                        function(x){ (abs(diff(actors[[x]]$duration_infected)) > 0) && actors[[x]]$duration_infected[1] == 0})
         
-        symptom_infect_t <- inf_t[unname(dur_symptom_infect_t)]
+        symptom_infect_t <- potential_qua_t[unname(dur_symptom_infect_t)]
+        
+        ####### need to add check if infected is already quarantined ########
           
         if(length(symptom_infect_t) > 0){
           
@@ -345,8 +356,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           } else {
             
             # Find 1 hop neighbors of symptom_infect_t during [max(t-digital_contact_tracing_look_back, 1), t]
-            index_current <- which(names(int_and_neighbors_by_t) == t)
-            one_hop <- unique(unlist(lapply(int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
+            index_current <- k
+            one_hop <- unique(unlist(lapply(copy_int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
                                             FUN = function(x){unique(names(unlist(unname(x$neighbors[symptom_infect_t]))))}),
                                      use.names = FALSE))
             

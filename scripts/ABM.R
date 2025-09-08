@@ -18,6 +18,21 @@ rm(list = setdiff(ls(), c("int_and_neighbors_by_t",
                           "clusters_ignore_noise",
                           "clusters_dichotomize_g_1")))
 
+load(file = "fb_net_LSM_res.RData")
+clusters_fb_network <- JANE:::summary.JANE(cns_fits)$cluster_labels
+
+rm(list = setdiff(ls(), c("int_and_neighbors_by_t",
+                          "total_actors",
+                          "clusters_accounting_for_noise",
+                          "clusters_ignore_noise",
+                          "clusters_dichotomize_g_1",
+                          "clusters_fb_network")))
+
+# random clusters
+clusters_random <- rmultinom(692, 1, prob = rep(1/4, 4))
+clusters_random <- apply(clusters_random, 2, which.max)
+names(clusters_random) <- as.character(1:692)
+
 # Source helper functions ------------------------------------------------------
 
 source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/scripts/helper_functions.R")
@@ -25,7 +40,7 @@ source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/script
 # Parameters ------------------------------------------------------------------
 
 # prob of transmisson among infected
-p_infected <- 0.005
+p_infected <- 0.0025
 
 # mean days exposed
 mean_exposure_days <- NULL # NULL is SIR model
@@ -42,14 +57,14 @@ p_asym <- 0.6 # if 0 all infections are symptomatic
 actor_labels <- 1:total_actors
 
 # Clusters for quarantine
-# clusters <- clusters_accounting_for_noise # NULL no intervention, any unnamed vector eg 1 will isolate individuals not clusters
+# clusters <- clusters_accounting_for_noise # NULL no intervention, any unnamed vector of length 1 will isolate infected and their 1-hop neighbors
 quarantine_days <- 7 # ignored if cluster is NULL (i.e., no intervention)
 
 # N time-steps
 timesteps <- names(int_and_neighbors_by_t)
 
 # Number of times to repeat weeks of interaction
-n_repeat <- 4 # 2*n_repeat weeks
+n_repeat <- 3 # 2*n_repeat weeks
 
 # Minimum degree for seed options if 0 will randomly select from 1-692
 min_degree_t1 <- 0
@@ -66,7 +81,8 @@ digital_contact_tracing_look_back <- 4
 #                        n_repeat = n_repeat,
 #                        p_asym = p_asym,
 #                        clusters = clusters,
-#                        quarantine_days = quarantine_days)
+#                        quarantine_days = quarantine_days,
+#                        digital_contact_tracing_look_back = digital_contact_tracing_look_back)
 
 # microbenchmark::microbenchmark(run_single_ABM(p_infected = p_infected,
 #                                               mean_exposure_days = mean_exposure_days,
@@ -77,13 +93,33 @@ digital_contact_tracing_look_back <- 4
 #                                               n_repeat = n_repeat,
 #                                               p_asym = p_asym,
 #                                               clusters = clusters,
-#                                               quarantine_days = quarantine_days),
-# times = 100)
+#                                               quarantine_days = quarantine_days,
+#                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back),
+#                                times = 100)
 
 # Run ABM for multiple trials --------------------------------------------------
 
 n_trial <- 1e4
 cores <- 100L
+
+## Run ABM with no intervention 
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_for_R0 <- parallel::mclapply(1:n_trial,
+                                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                                               mean_exposure_days = 1000, # makes it so seed is the only infective for duration of ABM
+                                                                               mean_infected_days = mean_infected_days,
+                                                                               actor_labels = actor_labels,
+                                                                               min_degree_t1 = min_degree_t1,
+                                                                               timesteps = timesteps,
+                                                                               n_repeat = n_repeat,
+                                                                               p_asym = p_asym,
+                                                                               clusters = NULL,
+                                                                               quarantine_days = quarantine_days,
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                              mc.preschedule = TRUE,
+                                              mc.cores = cores)
+
+R0_est_only_seed_infected <- mean(sapply(run_ABM_for_R0, function(x){x$R0}))
 
 ## Run ABM with no intervention 
 set.seed(1234, kind = "L'Ecuyer-CMRG")
@@ -113,7 +149,7 @@ run_ABM_isolate_individuals <- parallel::mclapply(1:n_trial,
                                                                                timesteps = timesteps,
                                                                                n_repeat = n_repeat,
                                                                                p_asym = p_asym,
-                                                                               clusters = 1, # if vector of length 1 will used digital contact tracing approach 
+                                                                               clusters = 1, # if vector of length 1 will use digital contact tracing approach 
                                                                                quarantine_days = quarantine_days,
                                                                                digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                                               mc.preschedule = TRUE,
@@ -170,9 +206,45 @@ run_ABM_dichotomize_g_1 <- parallel::mclapply(1:n_trial,
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
+## Run ABM with clustering based on FB data
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_fb_clusters <- parallel::mclapply(1:n_trial,
+                                              FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                                               mean_exposure_days = mean_exposure_days, 
+                                                                               mean_infected_days = mean_infected_days,
+                                                                               actor_labels = actor_labels,
+                                                                               min_degree_t1 = min_degree_t1,
+                                                                               timesteps = timesteps,
+                                                                               n_repeat = n_repeat,
+                                                                               p_asym = p_asym,
+                                                                               clusters = clusters_fb_network,
+                                                                               quarantine_days = quarantine_days,
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                              mc.preschedule = TRUE,
+                                              mc.cores = cores)
+
+## Run ABM with clustering on random partition
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_random_clusters <- parallel::mclapply(1:n_trial,
+                                          FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                                           mean_exposure_days = mean_exposure_days, 
+                                                                           mean_infected_days = mean_infected_days,
+                                                                           actor_labels = actor_labels,
+                                                                           min_degree_t1 = min_degree_t1,
+                                                                           timesteps = timesteps,
+                                                                           n_repeat = n_repeat,
+                                                                           p_asym = p_asym,
+                                                                           clusters = clusters_random,
+                                                                           quarantine_days = quarantine_days,
+                                                                           digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                          mc.preschedule = TRUE,
+                                          mc.cores = cores)
+
 save(run_ABM_no_intervention, run_ABM_isolate_individuals,
      run_ABM_accounting_for_noise,
      run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
+     run_ABM_fb_clusters, run_ABM_random_clusters,
+     R0_est_only_seed_infected,
      file = "test.run.RData")
 
 # Load libraries ---------------------------------------------------------------
@@ -455,14 +527,26 @@ no_intervention <- extract_function(run_ABM_no_intervention)
 isolate_individuals <- extract_function(run_ABM_isolate_individuals)
 ignore_noise <- extract_function(run_ABM_ignore_noise)
 accounting_for_noise <- extract_function(run_ABM_accounting_for_noise)
-ABM_dichotomize_g_1 <- extract_function(run_ABM_dichotomize_g_1)
-
+dichotomize_g_1 <- extract_function(run_ABM_dichotomize_g_1)
+fb_clusters <- extract_function(run_ABM_fb_clusters)
+random_clusters <- extract_function(run_ABM_random_clusters)
+  
 combined_list <- list("No Intervention" = no_intervention,
-                      "Isolated Individuals" = isolate_individuals,
+                      "Digital Contact Isolation" = isolate_individuals,
                       "CD - Ignore Noise" = ignore_noise,
-                      "CD - Dichotomize Network" = ABM_dichotomize_g_1,
-                      "CD - Accouting for Noise" = accounting_for_noise)
+                      "CD - Dichotomize Network" = dichotomize_g_1,
+                      "CD - Accouting for Noise" = accounting_for_noise,
+                      "CD - Facebook network" = fb_clusters,
+                      "Random Clusters" = random_clusters)
 
+comb_levels <- c("No Intervention",
+                 "Digital Contact Isolation",
+                 "CD - Ignore Noise",
+                 "CD - Dichotomize Network",
+                 "CD - Accouting for Noise",
+                 "CD - Facebook network",
+                 "Random Clusters")
+                 
 combined_fun <- function(metric){
   do.call("rbind",
           lapply(names(combined_list),
@@ -479,13 +563,13 @@ combined_fun <- function(metric){
                  }))
 }
 
+# Estimate of R0 where seed is the only infective agent ------------------------
+
+R0_est_only_seed_infected
+
 # Plot for R0 by group ---------------------------------------------------------
 combined_fun("R0") %>% 
-  mutate(group = factor(group, levels = c("No Intervention",
-                                          "Isolated Individuals",
-                                          "CD - Ignore Noise",
-                                          "CD - Dichotomize Network",
-                                          "CD - Accouting for Noise"))) %>% 
+  mutate(group = factor(group, levels = comb_levels)) %>% 
   ggplot(aes(x = group, y = value, fill = group)) +
   geom_boxplot(color = "black") +
   theme_minimal() +
@@ -501,11 +585,7 @@ combined_fun("R0") %>%
 
 # Plot for attack_rate by group ------------------------------------------------
 combined_fun("attack_rate") %>% 
-  mutate(group = factor(group, levels = c("No Intervention",
-                                          "Isolated Individuals",
-                                          "CD - Ignore Noise",
-                                          "CD - Dichotomize Network",
-                                          "CD - Accouting for Noise"))) %>% 
+  mutate(group = factor(group, levels = comb_levels)) %>% 
   ggplot(aes(x = group, y = value, fill = group)) +
   geom_boxplot(color = "black") +
   theme_minimal() +
@@ -522,11 +602,7 @@ combined_fun("attack_rate") %>%
 # Plot for incidence by time and by group --------------------------------------
 {
   df <- combined_fun("incidence") %>% 
-    mutate(group = factor(group, levels = c("No Intervention",
-                                            "Isolated Individuals",
-                                            "CD - Ignore Noise",
-                                            "CD - Dichotomize Network",
-                                            "CD - Accouting for Noise"))) 
+    mutate(group = factor(group, levels = comb_levels)) 
   
   # Compute median and IQR for each time and group
   summary_df <- df %>%
@@ -551,7 +627,7 @@ combined_fun("attack_rate") %>%
   
   palette <- c(
     "No Intervention" = "#E41A1C",       # red
-    "Isolated Individuals" = "#377EB8",  # blue
+    "Digital Contact Isolation" = "#377EB8",  # blue
     "CD - Ignore Noise" = "#4DAF4A",     # green
     "CD - Dichotomize Network" = "#984EA3", # purple
     "CD - Accouting for Noise" = "#FF7F00"  # orange
@@ -583,11 +659,7 @@ combined_fun("attack_rate") %>%
 
 # Plot for quarantined_rate by group -------------------------------------------
 combined_fun("quarantined_rate") %>% 
-  mutate(group = factor(group, levels = c("No Intervention",
-                                          "Isolated Individuals",
-                                          "CD - Ignore Noise",
-                                          "CD - Dichotomize Network",
-                                          "CD - Accouting for Noise"))) %>% 
+  mutate(group = factor(group, levels = comb_levels)) %>% 
   ggplot(aes(x = group, y = value)) +
   geom_boxplot(fill = "skyblue", color = "black") +
   theme_minimal() +
@@ -603,11 +675,7 @@ combined_fun("quarantined_rate") %>%
 # Plot for quarantined by time and by group -------------------------------------------
 {
 df <- combined_fun("quarantined") %>% 
-  mutate(group = factor(group, levels = c("No Intervention",
-                                          "Isolated Individuals",
-                                          "CD - Ignore Noise",
-                                          "CD - Dichotomize Network",
-                                          "CD - Accouting for Noise"))) 
+  mutate(group = factor(group, levels = comb_levels)) 
 
 # Compute median and IQR for each time and group
 summary_df <- df %>%
@@ -632,7 +700,7 @@ summary_df <- summary_df %>%
 
 palette <- c(
   "No Intervention" = "#E41A1C",       # red
-  "Isolated Individuals" = "#377EB8",  # blue
+  "Digital Contact Isolation" = "#377EB8",  # blue
   "CD - Ignore Noise" = "#4DAF4A",     # green
   "CD - Dichotomize Network" = "#984EA3", # purple
   "CD - Accouting for Noise" = "#FF7F00"  # orange
@@ -665,11 +733,7 @@ ggplot(summary_df, aes(x = time_jitter)) +
 # Plot for average number of interactions by time and by group -----------------
 {
   df <- combined_fun("interactions_by_time") %>% 
-    mutate(group = factor(group, levels = c("No Intervention",
-                                            "Isolated Individuals",
-                                            "CD - Ignore Noise",
-                                            "CD - Dichotomize Network",
-                                            "CD - Accouting for Noise"))) 
+    mutate(group = factor(group, levels = comb_levels)) 
   
   # Compute median and IQR for each time and group
   summary_df <- df %>%
@@ -694,7 +758,7 @@ ggplot(summary_df, aes(x = time_jitter)) +
   
   palette <- c(
     "No Intervention" = "#E41A1C",       # red
-    "Isolated Individuals" = "#377EB8",  # blue
+    "Digital Contact Isolation" = "#377EB8",  # blue
     "CD - Ignore Noise" = "#4DAF4A",     # green
     "CD - Dichotomize Network" = "#984EA3", # purple
     "CD - Accouting for Noise" = "#FF7F00"  # orange
@@ -726,11 +790,7 @@ ggplot(summary_df, aes(x = time_jitter)) +
 
 # Plot for average cumulative number of interactions across actors (i.e., average strength) by group -----------------
 combined_fun("average_cumulative_interactions_per_actor") %>% 
-  mutate(group = factor(group, levels = c("No Intervention",
-                                          "Isolated Individuals",
-                                          "CD - Ignore Noise",
-                                          "CD - Dichotomize Network",
-                                          "CD - Accouting for Noise"))) %>% 
+  mutate(group = factor(group, levels = comb_levels)) %>% 
   ggplot(aes(x = group, y = value)) +
   geom_boxplot(fill = "skyblue", color = "black") +
   theme_minimal() +
