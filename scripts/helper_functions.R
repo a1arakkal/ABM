@@ -6,11 +6,11 @@
 initialize_actors <- function(actor_names){
   
   actor_states <- list(state = 0L, # 0L susceptible, 1L exposed, 2L infected, 3L recoverd
-                       first_gen_infection = FALSE, # Infected by seed
+                       first_gen_infection = FALSE, # infected by seed
                        n_contacts = 0, # track cumulative number of contacts 
-                       ever_infected = FALSE, # Indicator if the agent ever became infected at any point 
-                       duration_exposed = 0L, # If exposed tracks days of latency (non-infectious) period 
-                       duration_infected = c(0L, 0L), # If infected tracks days of infectious period which is split into 
+                       ever_infected = FALSE, # indicator if the agent ever became infected at any point 
+                       duration_exposed = 0L, # if exposed tracks days of latency (non-infectious) period 
+                       duration_infected = c(0L, 0L), # if infected tracks days of infectious period which is split into 
                                                       # two cases: 1) SYMPTOMATIC infections will have a pre-symtomatic period 
                                                       # follow by a symtomatic period or 2) ASYMPTOMATIC infections just have one
                                                       # period. The first element will be duration of the pre-symtomatic/asymtomatic period
@@ -18,7 +18,8 @@ initialize_actors <- function(actor_names){
                                                       # So for ASYMPTOMATIC infections element 1 will equal element 2
                                                       # and for SYMPTOMATIC infections the symptomatic period is just element 2 minus element 1.
                        duration_quarantined = 0L, # if quarantined tracks days in quarantine
-                       ever_quarantined = FALSE)  # Indicator if the agent was ever quarantined at any point 
+                       ever_quarantined = FALSE, # indicator if the agent was ever quarantined at any point
+                       total_time_quarantined = 0L) # total time in quarantine
   
   actors <- lapply(1:length(actor_names), function(x){actor_states})
   names(actors) <- as.character(actor_names)
@@ -373,7 +374,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           if (length(quarantine) > 0){
             
             invisible(lapply(quarantine, function(x){actors[[x]]$duration_quarantined <- quarantine_days
-                                                     actors[[x]]$ever_quarantined <- TRUE}))
+                                                     actors[[x]]$ever_quarantined <- TRUE
+                                                     actors[[x]]$total_time_quarantined <- actors[[x]]$total_time_quarantined + quarantine_days}))
             
           }
           
@@ -392,11 +394,13 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
               quarantined = quarantined_t,
               average_interactions_by_time = average_interaction,
               average_cumulative_interactions_per_actor = mean(sapply(names(actors),
-                                                            function(x){actors[[x]]$n_contacts})),
+                                                                      function(x){actors[[x]]$n_contacts})),
               attack_rate = mean(sapply(names(actors),
                                         function(x){actors[[x]]$ever_infected})),
               quarantined_rate = mean(sapply(names(actors),
-                                        function(x){actors[[x]]$ever_quarantined})),
+                                             function(x){actors[[x]]$ever_quarantined})),
+              average_time_in_quarantine = mean(sapply(names(actors),
+                                                       function(x){actors[[x]]$total_time_quarantined})),
               R0 = sum(sapply(names(actors),
                               function(x){actors[[x]]$first_gen_infection}), na.rm = T)))
   

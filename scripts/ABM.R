@@ -28,10 +28,17 @@ rm(list = setdiff(ls(), c("int_and_neighbors_by_t",
                           "clusters_dichotomize_g_1",
                           "clusters_fb_network")))
 
-# random clusters
-clusters_random <- rmultinom(692, 1, prob = rep(1/4, 4))
-clusters_random <- apply(clusters_random, 2, which.max)
-names(clusters_random) <- as.character(1:692)
+# random clusters --------------------------------------------------------------
+
+#same size as fb clusters
+clusters_random_fb <- rmultinom(total_actors, 1, prob = prop.table(table(clusters_fb_network)))
+clusters_random_fb <- apply(clusters_random_fb , 2, which.max)
+names(clusters_random_fb) <- as.character(1:total_actors)
+
+#same size as lshm clusted
+clusters_random_lshm <- rmultinom(total_actors, 1, prob = prop.table(table(clusters_accounting_for_noise)))
+clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
+names(clusters_random_lshm) <- as.character(1:total_actors)
 
 # Source helper functions ------------------------------------------------------
 
@@ -99,7 +106,7 @@ digital_contact_tracing_look_back <- 4
 
 # Run ABM for multiple trials --------------------------------------------------
 
-n_trial <- 1e4
+n_trial <- 1e3
 cores <- 100L
 
 ## Run ABM with no intervention 
@@ -172,6 +179,23 @@ run_ABM_accounting_for_noise <- parallel::mclapply(1:n_trial,
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
+## Run ABM with random clusters similar size to  clustering accounting for noise 
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+run_ABM_random_lshm <- parallel::mclapply(1:n_trial,
+                                                   FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                                                    mean_exposure_days = mean_exposure_days, 
+                                                                                    mean_infected_days = mean_infected_days,
+                                                                                    actor_labels = actor_labels,
+                                                                                    min_degree_t1 = min_degree_t1,
+                                                                                    timesteps = timesteps,
+                                                                                    n_repeat = n_repeat,
+                                                                                    p_asym = p_asym,
+                                                                                    clusters = clusters_random_lshm,
+                                                                                    quarantine_days = quarantine_days,
+                                                                                    digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                   mc.preschedule = TRUE,
+                                                   mc.cores = cores)
+
 ## Run ABM with clustering ignoring for noise
 set.seed(1234, kind = "L'Ecuyer-CMRG")
 run_ABM_ignore_noise <- parallel::mclapply(1:n_trial,
@@ -223,9 +247,9 @@ run_ABM_fb_clusters <- parallel::mclapply(1:n_trial,
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
 
-## Run ABM with clustering on random partition
+## Run ABM with clustering on random partition similar size as FB clusters
 set.seed(1234, kind = "L'Ecuyer-CMRG")
-run_ABM_random_clusters <- parallel::mclapply(1:n_trial,
+run_ABM_random_clusters_fb <- parallel::mclapply(1:n_trial,
                                           FUN = function(x){run_single_ABM(p_infected = p_infected,
                                                                            mean_exposure_days = mean_exposure_days, 
                                                                            mean_infected_days = mean_infected_days,
@@ -234,16 +258,16 @@ run_ABM_random_clusters <- parallel::mclapply(1:n_trial,
                                                                            timesteps = timesteps,
                                                                            n_repeat = n_repeat,
                                                                            p_asym = p_asym,
-                                                                           clusters = clusters_random,
+                                                                           clusters = clusters_random_fb,
                                                                            quarantine_days = quarantine_days,
                                                                            digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
                                           mc.preschedule = TRUE,
                                           mc.cores = cores)
 
 save(run_ABM_no_intervention, run_ABM_isolate_individuals,
-     run_ABM_accounting_for_noise,
+     run_ABM_accounting_for_noise, run_ABM_random_lshm,
      run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
-     run_ABM_fb_clusters, run_ABM_random_clusters,
+     run_ABM_fb_clusters, run_ABM_random_clusters_fb,
      R0_est_only_seed_infected,
      file = "test.run.RData")
 
