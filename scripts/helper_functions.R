@@ -93,6 +93,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   if(!is.null(clusters) && length(clusters) == 1){
     # make copy of int_and_neighbors_by_t will be of length n_timesteps * n_repeat
     copy_int_and_neighbors_by_t <- rep(int_and_neighbors_by_t, n_repeat)
+    # stores actors quarantined at a particular time
+    quarantined_list_t <- vector("list", n_timesteps * n_repeat) 
   }
   
   # For loop number of time to repeat weeks
@@ -152,6 +154,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           # digital contact tracing appraoch
           copy_int_and_neighbors_by_t[[k]]$neighbors <- int_and_neighbors_t$neighbors
           copy_int_and_neighbors_by_t[[k]]$n_total_t <- int_and_neighbors_t$n_total_t
+          quarantined_list_t[[k]] <- qua_t
         }
         
       }
@@ -367,12 +370,17 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
             
             # Find 1 hop neighbors of symptom_infect_t during [max(t-digital_contact_tracing_look_back, 1), t] and allow for inaccuracy
             index_current <- k
-            one_hop <- unique(unlist(lapply(copy_int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
+            one_hop <- unique(unlist(lapply(max(index_current-digital_contact_tracing_look_back, 1):index_current,
                                             FUN = function(x){
-                                              one_hop_ints <- unlist(unname(x$neighbors[symptom_infect_t])) # find "true" 1-hop neighbors of symptomatic actors, note
+                                              
+                                              ints_t <- copy_int_and_neighbors_by_t[[x]]
+                                              quarantined_t <- quarantined_list_t[[x]]
+                                              one_hop_ints <- unlist(unname(ints_t$neighbors[symptom_infect_t])) # find "true" 1-hop neighbors of symptomatic actors, note
                                                                                                             # using copy_int_and_neighbors_by_t already removes interactions
                                                                                                             # of quarantined actors at time t
-                                              non_interactions <- setdiff(names(actors), c(unique(names(one_hop_ints)), qua_t)) # find "true" non-interactions, exclude quarantined
+                                              non_interactions <- setdiff(names(actors), c(unique(names(one_hop_ints), 
+                                                                                                  symptom_infect_t,
+                                                                                                  quarantined_t))) # find "true" non-interactions
                                               
                                               if(!is.null(one_hop_ints) && length(one_hop_ints) > 0) {
                                                 one_hop_ints_total <- tapply(one_hop_ints, names(one_hop_ints), sum)
@@ -388,7 +396,9 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                               } else {
                                                 false_positive <- NULL
                                               }
+                                              
                                               return(unique(c(one_hop_ints_at_least_one_int_capture, false_positive)))
+                                              
                                             }),
                                      use.names = FALSE))
             
