@@ -34,7 +34,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                            mean_infected_days, actor_labels,
                            timesteps, n_repeat, min_degree_t1,
                            p_asym, clusters, quarantine_days,
-                           digital_contact_tracing_look_back){
+                           digital_contact_tracing_look_back,
+                           digital_contact_tracing_accuracy){
   
   # initialize actors
   actors <- initialize_actors(actor_labels)
@@ -357,9 +358,24 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
           } else {
             
             # Find 1 hop neighbors of symptom_infect_t during [max(t-digital_contact_tracing_look_back, 1), t]
+            # index_current <- k
+            # one_hop <- unique(unlist(lapply(copy_int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
+            #                                 FUN = function(x){unique(names(unlist(unname(x$neighbors[symptom_infect_t]))))}),
+            #                          use.names = FALSE))
+            
+            # Find 1 hop neighbors of symptom_infect_t during [max(t-digital_contact_tracing_look_back, 1), t] and allow for inaccuracy
             index_current <- k
             one_hop <- unique(unlist(lapply(copy_int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
-                                            FUN = function(x){unique(names(unlist(unname(x$neighbors[symptom_infect_t]))))}),
+                                            FUN = function(x){
+                                              one_hop_ints <- unlist(unname(x$neighbors[symptom_infect_t]))
+                                              if(!is.null(one_hop_ints) && length(one_hop_ints) > 0) {
+                                                one_hop_ints_total <- tapply(one_hop_ints, names(one_hop_ints), sum)
+                                                one_hop_ints_prob_at_least_one_int_capture <- 1-((1-digital_contact_tracing_accuracy)^one_hop_ints_total)
+                                                one_hop_ints_at_least_one_int_capture <- runif(n = length(one_hop_ints_total)) < one_hop_ints_prob_at_least_one_int_capture
+                                                return(unique(names(one_hop_ints_at_least_one_int_capture[one_hop_ints_at_least_one_int_capture])))
+                                              } else {
+                                                return(NULL)
+                                              }}),
                                      use.names = FALSE))
             
             ## Quarantine actors include those infected and their one-hop neighbors

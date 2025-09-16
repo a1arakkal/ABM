@@ -58,26 +58,29 @@ mean_infected_days <- c("asymptomatic" = 10L,
                         "symptomatic" = 5L)
 
 # prob of being asymptomatic given infected
-p_asym <- 0.6 # if 0 all infections are symptomatic
+p_asym <- 0.8 # if 0 all infections are symptomatic
 
 # Initilize actors
 actor_labels <- 1:total_actors
 
 # Clusters for quarantine
 # clusters <- clusters_accounting_for_noise # NULL no intervention, any unnamed vector of length 1 will isolate infected and their 1-hop neighbors
-quarantine_days <- 7 # ignored if cluster is NULL (i.e., no intervention)
+quarantine_days <- 12 # ignored if cluster is NULL (i.e., no intervention)
 
 # N time-steps
 timesteps <- names(int_and_neighbors_by_t)
 
 # Number of times to repeat weeks of interaction
-n_repeat <- 3 # 2*n_repeat weeks
+n_repeat <- 4 # 2*n_repeat weeks
 
 # Minimum degree for seed options if 0 will randomly select from 1-692
 min_degree_t1 <- 0
   
 # How far to look back for digital contact tracing if used as intervention inclusive of current day
 digital_contact_tracing_look_back <- 4
+
+# How well are contacts captured using digital contact tracing if used as intervention
+digital_contact_tracing_accuracy <- 0.50
 
 # test <- run_single_ABM(p_infected = p_infected,
 #                        mean_exposure_days = mean_exposure_days,
@@ -89,7 +92,8 @@ digital_contact_tracing_look_back <- 4
 #                        p_asym = p_asym,
 #                        clusters = clusters,
 #                        quarantine_days = quarantine_days,
-#                        digital_contact_tracing_look_back = digital_contact_tracing_look_back)
+#                        digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+#                        digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)
 
 # microbenchmark::microbenchmark(run_single_ABM(p_infected = p_infected,
 #                                               mean_exposure_days = mean_exposure_days,
@@ -101,7 +105,8 @@ digital_contact_tracing_look_back <- 4
 #                                               p_asym = p_asym,
 #                                               clusters = clusters,
 #                                               quarantine_days = quarantine_days,
-#                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back),
+#                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+#                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy),
 #                                times = 100)
 
 # Run ABM for multiple trials --------------------------------------------------
@@ -122,7 +127,8 @@ run_ABM_for_R0 <- parallel::mclapply(1:n_trial,
                                                                                p_asym = p_asym,
                                                                                clusters = NULL,
                                                                                quarantine_days = quarantine_days,
-                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
 
@@ -141,7 +147,8 @@ run_ABM_no_intervention <- parallel::mclapply(1:n_trial,
                                                                p_asym = p_asym,
                                                                clusters = NULL,
                                                                quarantine_days = quarantine_days,
-                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -158,7 +165,8 @@ run_ABM_isolate_individuals <- parallel::mclapply(1:n_trial,
                                                                                p_asym = p_asym,
                                                                                clusters = 1, # if vector of length 1 will use digital contact tracing approach 
                                                                                quarantine_days = quarantine_days,
-                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
 
@@ -175,7 +183,8 @@ run_ABM_accounting_for_noise <- parallel::mclapply(1:n_trial,
                                                                p_asym = p_asym,
                                                                clusters = clusters_accounting_for_noise,
                                                                quarantine_days = quarantine_days,
-                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -192,7 +201,8 @@ run_ABM_random_lshm <- parallel::mclapply(1:n_trial,
                                                                                     p_asym = p_asym,
                                                                                     clusters = clusters_random_lshm,
                                                                                     quarantine_days = quarantine_days,
-                                                                                    digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                                                    digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                                    digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                                                    mc.preschedule = TRUE,
                                                    mc.cores = cores)
 
@@ -209,7 +219,8 @@ run_ABM_ignore_noise <- parallel::mclapply(1:n_trial,
                                                                p_asym = p_asym,
                                                                clusters = clusters_ignore_noise,
                                                                quarantine_days = quarantine_days,
-                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -226,7 +237,8 @@ run_ABM_dichotomize_g_1 <- parallel::mclapply(1:n_trial,
                                                                p_asym = p_asym,
                                                                clusters = clusters_dichotomize_g_1,
                                                                quarantine_days = quarantine_days,
-                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                               mc.preschedule = TRUE,
                               mc.cores = cores)
 
@@ -243,13 +255,14 @@ run_ABM_fb_clusters <- parallel::mclapply(1:n_trial,
                                                                                p_asym = p_asym,
                                                                                clusters = clusters_fb_network,
                                                                                quarantine_days = quarantine_days,
-                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                               digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
 
 ## Run ABM with clustering on random partition similar size as FB clusters
 set.seed(1234, kind = "L'Ecuyer-CMRG")
-run_ABM_random_clusters_fb <- parallel::mclapply(1:n_trial,
+run_ABM_random_fb <- parallel::mclapply(1:n_trial,
                                           FUN = function(x){run_single_ABM(p_infected = p_infected,
                                                                            mean_exposure_days = mean_exposure_days, 
                                                                            mean_infected_days = mean_infected_days,
@@ -260,14 +273,15 @@ run_ABM_random_clusters_fb <- parallel::mclapply(1:n_trial,
                                                                            p_asym = p_asym,
                                                                            clusters = clusters_random_fb,
                                                                            quarantine_days = quarantine_days,
-                                                                           digital_contact_tracing_look_back = digital_contact_tracing_look_back)},
+                                                                           digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                           digital_contact_tracing_accuracy = digital_contact_tracing_accuracy)},
                                           mc.preschedule = TRUE,
                                           mc.cores = cores)
 
 save(run_ABM_no_intervention, run_ABM_isolate_individuals,
      run_ABM_accounting_for_noise, run_ABM_random_lshm,
      run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
-     run_ABM_fb_clusters, run_ABM_random_clusters_fb,
+     run_ABM_fb_clusters, run_ABM_random_fb,
      R0_est_only_seed_infected,
      file = "test.run.RData")
 
@@ -307,6 +321,13 @@ extract_function <- function(run_ABM){
   
   # Average quarantine across trials ------------------------------------------------
   
+  average_time_in_quarantine <- sapply(run_ABM, function(x){x$average_time_in_quarantine})
+  # mean(average_time_in_quarantine)
+  # quantile(average_time_in_quarantine, probs = c(0.025,0.975))
+  # boxplot(average_time_in_quarantine)
+  
+  # Average quarantine across trials ------------------------------------------------
+  
   quarantined_rate <- sapply(run_ABM, function(x){x$quarantined_rate})
   # mean(quarantined_rate)
   # quantile(quarantined_rate, probs = c(0.025,0.975))
@@ -328,7 +349,7 @@ extract_function <- function(run_ABM){
   data <- data.frame(incidence = ave_incidence,
                      time = 1:length(ave_incidence))
   
-  incident_cases_plot <- ggplot(data, aes(x = time, y = ave_incidene)) +
+  incident_cases_plot <- ggplot(data, aes(x = time, y = ave_incidence)) +
     geom_line(size = 1) +
     theme_minimal() +
     labs(
@@ -377,9 +398,9 @@ extract_function <- function(run_ABM){
   average_interactions_plot <- ggplot(data, aes(x = time, y = average_interactions_by_time)) +
     geom_line(size = 1) +
     theme_minimal() +
-    scale_x_continuous(breaks = seq(3.5, 56-3.5, 7),
-                       labels = paste0("Week ", 1:8)) +
-    geom_vline(xintercept = seq(7, 56, 7), color = "black", lty = "dashed") +
+    scale_x_continuous(breaks = seq(3.5, max(data$time)-3.5, 7),
+                       labels = paste0("Week ", 1:(max(data$time)/7))) +
+    geom_vline(xintercept = seq(7, max(data$time), 7), color = "black", lty = "dashed") +
     labs(
       title = "Average number of interactions per actor by time averaged over trials",
       x = "Time (Weeks)",
@@ -443,12 +464,12 @@ extract_function <- function(run_ABM){
   #   summarise(sum(total)*4/692) # times 4 as we duplicated the 2 weeks 4 times
   
   # Average trajectories across trials -------------------------------------------
-  trajectories <- lapply(seq_along(run_ABM), function(i) {
-    data.frame(
-      run = i,
-      time = rep(1:length( run_ABM[[i]]$res), each = 4)) %>% 
-      cbind(as.data.frame(t( run_ABM[[i]]$res)))
-  }) %>% bind_rows()
+  # trajectories <- lapply(seq_along(run_ABM), function(i) {
+  #   data.frame(
+  #     run = i,
+  #     time = rep(1:ncol( run_ABM[[i]]$res))) %>% 
+  #     cbind(as.data.frame(t( run_ABM[[i]]$res)))
+  # }) %>% bind_rows()
   
   res_array <- simplify2array(lapply(run_ABM, function(x) x$res))
   res_mean <- apply(res_array, c(1,2), mean)
@@ -482,13 +503,14 @@ extract_function <- function(run_ABM){
                         attack_rate = attack_rate,
                         incidence_max = incidence_max,
                         quarantined_rate = quarantined_rate,
+                        average_time_in_quarantine = average_time_in_quarantine,
                         quarantined_max = quarantined_max,
                         average_interactions_by_time = average_interactions_by_time,
                         average_cumulative_interactions_per_actor = average_cumulative_interactions_per_actor,
                         incidence = incidence,
                         quarantined = quarantined,
                         interactions_by_time = interactions,
-                        trajectories = trajectories,
+                        # trajectories = trajectories,
                         plots = list(ABM_plot = ABM_plot,
                                      average_interactions_plot = average_interactions_plot,
                                      quarantined_plot = quarantined_plot,
@@ -517,6 +539,11 @@ print.ABM <- function(x,...){
   cat("   Mean:", mean(x$quarantined_rate), "\n")
   cat("   Median:", median(x$quarantined_rate), "\n")
   cat("   (Q1, Q3):", quantile(x$quarantined_rate, probs = c(0.25,0.75)), "\n\n")
+  
+  cat("Estimated average time in quarantine:\n")
+  cat("   Mean:", mean(x$average_time_in_quarantine), "\n")
+  cat("   Median:", median(x$average_time_in_quarantine), "\n")
+  cat("   (Q1, Q3):", quantile(x$average_time_in_quarantine, probs = c(0.25,0.75)), "\n\n")
   
   cat("Estimated max number of quarantined actors:\n")
   cat("   Mean:", mean(x$quarantined_max), "\n")
@@ -553,7 +580,8 @@ ignore_noise <- extract_function(run_ABM_ignore_noise)
 accounting_for_noise <- extract_function(run_ABM_accounting_for_noise)
 dichotomize_g_1 <- extract_function(run_ABM_dichotomize_g_1)
 fb_clusters <- extract_function(run_ABM_fb_clusters)
-random_clusters <- extract_function(run_ABM_random_clusters)
+random_fb <- extract_function(run_ABM_random_fb)
+random_lshm <- extract_function(run_ABM_random_lshm)
   
 combined_list <- list("No Intervention" = no_intervention,
                       "Digital Contact Isolation" = isolate_individuals,
@@ -561,7 +589,8 @@ combined_list <- list("No Intervention" = no_intervention,
                       "CD - Dichotomize Network" = dichotomize_g_1,
                       "CD - Accouting for Noise" = accounting_for_noise,
                       "CD - Facebook network" = fb_clusters,
-                      "Random Clusters" = random_clusters)
+                      "Random Clusters - FB" = random_fb,
+                      "Random Clusters - LSHM" = random_lshm)
 
 comb_levels <- c("No Intervention",
                  "Digital Contact Isolation",
@@ -569,7 +598,8 @@ comb_levels <- c("No Intervention",
                  "CD - Dichotomize Network",
                  "CD - Accouting for Noise",
                  "CD - Facebook network",
-                 "Random Clusters")
+                 "Random Clusters - FB",
+                 "Random Clusters - LSHM")
                  
 combined_fun <- function(metric){
   do.call("rbind",
@@ -623,63 +653,63 @@ combined_fun("attack_rate") %>%
     legend.position = "none"
   )
 
-# Plot for incidence by time and by group --------------------------------------
-{
-  df <- combined_fun("incidence") %>% 
-    mutate(group = factor(group, levels = comb_levels)) 
-  
-  # Compute median and IQR for each time and group
-  summary_df <- df %>%
-    group_by(time, group) %>%
-    summarize(
-      median = median(cases),
-      q25 = quantile(cases, 0.25),
-      q75 = quantile(cases, 0.75),
-      iqr = IQR(cases),
-      lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
-      upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
-      .groups = "drop"
-    )
-  
-  # Define offsets for staggering groups
-  group_levels <- levels(summary_df$group)
-  n_groups <- length(group_levels)
-  offset <- 0.17  # adjust spacing
-  
-  summary_df <- summary_df %>%
-    mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
-  
-  palette <- c(
-    "No Intervention" = "#E41A1C",       # red
-    "Digital Contact Isolation" = "#377EB8",  # blue
-    "CD - Ignore Noise" = "#4DAF4A",     # green
-    "CD - Dichotomize Network" = "#984EA3", # purple
-    "CD - Accouting for Noise" = "#FF7F00"  # orange
-  )
-  
-  ggplot(summary_df, aes(x = time_jitter)) +
-    # Whiskers (thin black lines outside IQR)
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
-    # IQR region (thicker colored line)
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
-    # Median dot (same color as group)
-    geom_point(aes(y = median, color = group), size = 1) +
-    scale_color_manual(values = palette) +
-    theme_minimal() +
-    labs(
-      title = "Number infected over time by group",
-      x = "Time (Days)",
-      y = "Number infected",
-      color = NULL,
-      fill = NULL
-    ) +
-    theme(
-      legend.position = "bottom",
-      legend.direction = "horizontal"
-    ) +
-    scale_x_continuous(breaks = seq(7, 56, 7)) 
-}
+# # Plot for incidence by time and by group --------------------------------------
+# {
+#   df <- combined_fun("incidence") %>% 
+#     mutate(group = factor(group, levels = comb_levels)) 
+#   
+#   # Compute median and IQR for each time and group
+#   summary_df <- df %>%
+#     group_by(time, group) %>%
+#     summarize(
+#       median = median(cases),
+#       q25 = quantile(cases, 0.25),
+#       q75 = quantile(cases, 0.75),
+#       iqr = IQR(cases),
+#       lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
+#       upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
+#       .groups = "drop"
+#     )
+#   
+#   # Define offsets for staggering groups
+#   group_levels <- levels(summary_df$group)
+#   n_groups <- length(group_levels)
+#   offset <- 0.17  # adjust spacing
+#   
+#   summary_df <- summary_df %>%
+#     mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
+#   
+#   palette <- c(
+#     "No Intervention" = "#E41A1C",       # red
+#     "Digital Contact Isolation" = "#377EB8",  # blue
+#     "CD - Ignore Noise" = "#4DAF4A",     # green
+#     "CD - Dichotomize Network" = "#984EA3", # purple
+#     "CD - Accouting for Noise" = "#FF7F00"  # orange
+#   )
+#   
+#   ggplot(summary_df, aes(x = time_jitter)) +
+#     # Whiskers (thin black lines outside IQR)
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
+#     # IQR region (thicker colored line)
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
+#     # Median dot (same color as group)
+#     geom_point(aes(y = median, color = group), size = 1) +
+#     scale_color_manual(values = palette) +
+#     theme_minimal() +
+#     labs(
+#       title = "Number infected over time by group",
+#       x = "Time (Days)",
+#       y = "Number infected",
+#       color = NULL,
+#       fill = NULL
+#     ) +
+#     theme(
+#       legend.position = "bottom",
+#       legend.direction = "horizontal"
+#     ) +
+#     scale_x_continuous(breaks = seq(7, 56, 7)) 
+# }
 
 # Plot for quarantined_rate by group -------------------------------------------
 combined_fun("quarantined_rate") %>% 
@@ -696,121 +726,136 @@ combined_fun("quarantined_rate") %>%
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# Plot for quarantined by time and by group -------------------------------------------
-{
-df <- combined_fun("quarantined") %>% 
-  mutate(group = factor(group, levels = comb_levels)) 
-
-# Compute median and IQR for each time and group
-summary_df <- df %>%
-  group_by(time, group) %>%
-  summarize(
-    median = median(cases),
-    q25 = quantile(cases, 0.25),
-    q75 = quantile(cases, 0.75),
-    iqr = IQR(cases),
-    lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
-    upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
-    .groups = "drop"
-  )
-
-# Define offsets for staggering groups
-group_levels <- levels(summary_df$group)
-n_groups <- length(group_levels)
-offset <- 0.17  # adjust spacing
-
-summary_df <- summary_df %>%
-  mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
-
-palette <- c(
-  "No Intervention" = "#E41A1C",       # red
-  "Digital Contact Isolation" = "#377EB8",  # blue
-  "CD - Ignore Noise" = "#4DAF4A",     # green
-  "CD - Dichotomize Network" = "#984EA3", # purple
-  "CD - Accouting for Noise" = "#FF7F00"  # orange
-)
-
-ggplot(summary_df, aes(x = time_jitter)) +
-  # Whiskers (thin black lines outside IQR)
-  geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
-  geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
-  # IQR region (thicker colored line)
-  geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
-  # Median dot (same color as group)
-  geom_point(aes(y = median, color = group), size = 1) +
-  scale_color_manual(values = palette) +
+# Plot for average_time_in_quarantine by group -------------------------------------------
+combined_fun("average_time_in_quarantine") %>% 
+  mutate(group = factor(group, levels = comb_levels)) %>% 
+  ggplot(aes(x = group, y = value)) +
+  geom_boxplot(fill = "skyblue", color = "black") +
   theme_minimal() +
   labs(
-    title = "Number quarantined over time by group",
-    x = "Time (Days)",
-    y = "Number quarantined",
-    color = NULL,
-    fill = NULL
-  ) +
+    title = "Boxplot of average time in quarantine per actor by group",
+    x = "",
+    y = "Average time in quarantine per actor (days)"
+  )+
   theme(
-    legend.position = "bottom",
-    legend.direction = "horizontal"
-  ) +
-  scale_x_continuous(breaks = seq(7, 56, 7)) 
-}
-
-# Plot for average number of interactions by time and by group -----------------
-{
-  df <- combined_fun("interactions_by_time") %>% 
-    mutate(group = factor(group, levels = comb_levels)) 
-  
-  # Compute median and IQR for each time and group
-  summary_df <- df %>%
-    group_by(time, group) %>%
-    summarize(
-      median = median(cases),
-      q25 = quantile(cases, 0.25),
-      q75 = quantile(cases, 0.75),
-      iqr = IQR(cases),
-      lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
-      upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
-      .groups = "drop"
-    )
-  
-  # Define offsets for staggering groups
-  group_levels <- levels(summary_df$group)
-  n_groups <- length(group_levels)
-  offset <- 0.17  # adjust spacing
-  
-  summary_df <- summary_df %>%
-    mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
-  
-  palette <- c(
-    "No Intervention" = "#E41A1C",       # red
-    "Digital Contact Isolation" = "#377EB8",  # blue
-    "CD - Ignore Noise" = "#4DAF4A",     # green
-    "CD - Dichotomize Network" = "#984EA3", # purple
-    "CD - Accouting for Noise" = "#FF7F00"  # orange
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
-  
-  ggplot(summary_df, aes(x = time_jitter)) +
-    # Whiskers (thin black lines outside IQR)
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
-    # IQR region (thicker colored line)
-    geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
-    # Median dot (same color as group)
-    geom_point(aes(y = median, color = group), size = 1) +
-    scale_color_manual(values = palette) +
-    theme_minimal() +
-    labs(
-      title = "Average number of interactions over time by group",
-      x = "Time (Days)",
-      y = "Average number of interactions",
-      color = NULL,
-      fill = NULL
-    ) +
-    theme(
-      legend.position = "bottom",
-      legend.direction = "horizontal"
-    ) +
-    scale_x_continuous(breaks = seq(7, 56, 7)) 
-}
+
+# # Plot for quarantined by time and by group -------------------------------------------
+# {
+# df <- combined_fun("quarantined") %>% 
+#   mutate(group = factor(group, levels = comb_levels)) 
+# 
+# # Compute median and IQR for each time and group
+# summary_df <- df %>%
+#   group_by(time, group) %>%
+#   summarize(
+#     median = median(cases),
+#     q25 = quantile(cases, 0.25),
+#     q75 = quantile(cases, 0.75),
+#     iqr = IQR(cases),
+#     lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
+#     upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
+#     .groups = "drop"
+#   )
+# 
+# # Define offsets for staggering groups
+# group_levels <- levels(summary_df$group)
+# n_groups <- length(group_levels)
+# offset <- 0.17  # adjust spacing
+# 
+# summary_df <- summary_df %>%
+#   mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
+# 
+# palette <- c(
+#   "No Intervention" = "#E41A1C",       # red
+#   "Digital Contact Isolation" = "#377EB8",  # blue
+#   "CD - Ignore Noise" = "#4DAF4A",     # green
+#   "CD - Dichotomize Network" = "#984EA3", # purple
+#   "CD - Accouting for Noise" = "#FF7F00"  # orange
+# )
+# 
+# ggplot(summary_df, aes(x = time_jitter)) +
+#   # Whiskers (thin black lines outside IQR)
+#   geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
+#   geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
+#   # IQR region (thicker colored line)
+#   geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
+#   # Median dot (same color as group)
+#   geom_point(aes(y = median, color = group), size = 1) +
+#   scale_color_manual(values = palette) +
+#   theme_minimal() +
+#   labs(
+#     title = "Number quarantined over time by group",
+#     x = "Time (Days)",
+#     y = "Number quarantined",
+#     color = NULL,
+#     fill = NULL
+#   ) +
+#   theme(
+#     legend.position = "bottom",
+#     legend.direction = "horizontal"
+#   ) +
+#   scale_x_continuous(breaks = seq(7, 56, 7)) 
+# }
+
+# # Plot for average number of interactions by time and by group -----------------
+# {
+#   df <- combined_fun("interactions_by_time") %>% 
+#     mutate(group = factor(group, levels = comb_levels)) 
+#   
+#   # Compute median and IQR for each time and group
+#   summary_df <- df %>%
+#     group_by(time, group) %>%
+#     summarize(
+#       median = median(cases),
+#       q25 = quantile(cases, 0.25),
+#       q75 = quantile(cases, 0.75),
+#       iqr = IQR(cases),
+#       lower_whisker = max(min(cases), q25 - 1.5*IQR(cases)),
+#       upper_whisker = min(max(cases), q75 + 1.5*IQR(cases)),
+#       .groups = "drop"
+#     )
+#   
+#   # Define offsets for staggering groups
+#   group_levels <- levels(summary_df$group)
+#   n_groups <- length(group_levels)
+#   offset <- 0.17  # adjust spacing
+#   
+#   summary_df <- summary_df %>%
+#     mutate(time_jitter = time + (as.numeric(group) - (n_groups+1)/2)*offset)
+#   
+#   palette <- c(
+#     "No Intervention" = "#E41A1C",       # red
+#     "Digital Contact Isolation" = "#377EB8",  # blue
+#     "CD - Ignore Noise" = "#4DAF4A",     # green
+#     "CD - Dichotomize Network" = "#984EA3", # purple
+#     "CD - Accouting for Noise" = "#FF7F00"  # orange
+#   )
+#   
+#   ggplot(summary_df, aes(x = time_jitter)) +
+#     # Whiskers (thin black lines outside IQR)
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = lower_whisker, yend = q25), color = "black", size = 0.5) +
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = q75, yend = upper_whisker), color = "black", size = 0.5) +
+#     # IQR region (thicker colored line)
+#     geom_segment(aes(x = time_jitter, xend = time_jitter, y = q25, yend = q75, color = group), size = 1) +
+#     # Median dot (same color as group)
+#     geom_point(aes(y = median, color = group), size = 1) +
+#     scale_color_manual(values = palette) +
+#     theme_minimal() +
+#     labs(
+#       title = "Average number of interactions over time by group",
+#       x = "Time (Days)",
+#       y = "Average number of interactions",
+#       color = NULL,
+#       fill = NULL
+#     ) +
+#     theme(
+#       legend.position = "bottom",
+#       legend.direction = "horizontal"
+#     ) +
+#     scale_x_continuous(breaks = seq(7, 56, 7)) 
+# }
 
 # Plot for average cumulative number of interactions across actors (i.e., average strength) by group -----------------
 combined_fun("average_cumulative_interactions_per_actor") %>% 
@@ -819,9 +864,9 @@ combined_fun("average_cumulative_interactions_per_actor") %>%
   geom_boxplot(fill = "skyblue", color = "black") +
   theme_minimal() +
   labs(
-    title = "Boxplot of average strength by group",
+    title = "Boxplot of average strength per actor by group",
     x = "",
-    y = "Average strength"
+    y = "Average strength per actor"
   )+
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1)

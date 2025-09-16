@@ -15,6 +15,7 @@ cns =
 
 setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/")
 
+# Get user ids from bt_symmetric
 cns %<>%
   clean_names()
 
@@ -34,13 +35,25 @@ cns %<>%
   clean_names()
 
 cns %<>%
-  filter(duration >= 0) # See readme.  -1 means missed call
+  mutate(duration = ifelse(duration<0, 0, duration)) # See readme.  -1 means missed call keep and treat as duration =0
+# See readme.  Negative values mean missed calls but an observation suggests that a call has been made
 
 total_actors <- nrow(user_values)
+user_values_calls <- tibble(user = sort(unique(c(cns$caller,cns$callee)))) 
+
+user_values_calls %>% inner_join(user_values) # 493 both in call and bt network
+user_values_calls %>% anti_join(user_values) # 43 only in call network (these are the ones we need to remove)
+user_values_calls %>% anti_join(user_values, .) #199 only in bt network not in call network 
 
 # Replace user values with new user values
 cns %<>%
-  filter( (caller %in% user_values$user) &  (callee %in% user_values$user)) %>% 
+  filter( (caller %in% user_values$user) &  (callee %in% user_values$user)) # caller and callee in bt network as well
+
+# tibble(user = sort(unique(c(cns$caller,cns$callee)))) %>% anti_join(user_values)
+# tibble(user = sort(unique(c(cns$caller,cns$callee)))) %>% anti_join(user_values,.)
+# tibble(user = sort(unique(c(cns$caller,cns$callee)))) %>% inner_join(user_values)
+
+cns %<>%
   left_join(user_values,
             by = join_by(caller == user)) %>% 
   select(-caller) %>% 
@@ -54,6 +67,9 @@ cns_aggregated <- cns %>%
   group_by(caller, callee) %>% 
   summarise(duration = sum(duration), .groups = "drop") %>% 
   filter(duration>0)
+
+# cns %>% 
+#   filter(!( (caller %in% user_values$name) &  (callee %in% user_values$name)))
 
 # cns_net <-  tbl_graph(nodes =
 #                         user_values %>% select(name),
@@ -71,6 +87,8 @@ A <- Matrix::sparseMatrix(i = cns_aggregated$caller,
 # all.equal(A, B, check.attributes = F)
 rownames(A) <- 1:total_actors
 colnames(A) <- 1:total_actors
+isSymmetric(A)
+sum(A>0)/(nrow(A)*(nrow(A)-1)) #0.001528739
 
 # Check for isolates. These will be removed from LSHM approach so they will no
 # be assigned into a cluster. Thus, in intervention if these actors are the seed
@@ -84,7 +102,7 @@ setwd("/Users/atlan/dissertation/real_data_application/paper3/")
 A <- readRDS("call_network.RDS")
 
 library(JANE)
-future::plan(future::multisession, workers = 16)
+future::plan(future::multisession, workers = 100)
 time_cns_fits <- system.time({
   cns_fits = 
     JANE(A,
