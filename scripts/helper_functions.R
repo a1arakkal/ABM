@@ -1,6 +1,6 @@
 # Helper function --------------------------------------------------------------
 
-# This function is to initialze the environment to keep track of the actors's states
+# This function is to initialze the environment to keep track of the actors' states
 # through each step of the ABM
 
 initialize_actors <- function(actor_names){
@@ -35,7 +35,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                            timesteps, n_repeat, min_degree_t1,
                            p_asym, clusters, quarantine_days,
                            digital_contact_tracing_look_back,
-                           digital_contact_tracing_accuracy){
+                           DCT_sensitivity, DCT_specificity){
   
   # initialize actors
   actors <- initialize_actors(actor_labels)
@@ -89,8 +89,11 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
   # initialize counter
   k <- 1
   
-  # make copy of int_and_neighbors_by_t will be of length n_timesteps * n_repeat
-  copy_int_and_neighbors_by_t <- rep(int_and_neighbors_by_t, n_repeat)
+  # Only required for the digital contact tracing approach
+  if(!is.null(clusters) && length(clusters) == 1){
+    # make copy of int_and_neighbors_by_t will be of length n_timesteps * n_repeat
+    copy_int_and_neighbors_by_t <- rep(int_and_neighbors_by_t, n_repeat)
+  }
   
   # For loop number of time to repeat weeks
   for(R in 1:n_repeat){
@@ -126,11 +129,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       # remove interations for those quarantined
       if(length(qua_t) > 0){
         int_and_neighbors_t$neighbors <- int_and_neighbors_t$neighbors[setdiff(names(int_and_neighbors_t$neighbors), qua_t)] 
-        # test <- lapply(int_and_neighbors_t$neighbors,
-        #                                         FUN = function(x){
-        #                                           x[setdiff(names(x), qua_t)]
-        #                                         })
-        
+
         if(length(int_and_neighbors_t$neighbors) > 0){
           temp <- lapply(int_and_neighbors_t$neighbors,
                          FUN = function(x){
@@ -147,8 +146,13 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                                   FUN = function(x){x$p2})
         }
         
-        copy_int_and_neighbors_by_t[[k]]$neighbors <- int_and_neighbors_t$neighbors
-        copy_int_and_neighbors_by_t[[k]]$n_total_t <- int_and_neighbors_t$n_total_t
+        if(!is.null(clusters) && length(clusters) == 1){
+          # here we remove the contacts of the quarantined actors in copy_int_and_neighbors_by_t,
+          # so that we can track the "true" contacts over time accounting for quarantining when using the 
+          # digital contact tracing appraoch
+          copy_int_and_neighbors_by_t[[k]]$neighbors <- int_and_neighbors_t$neighbors
+          copy_int_and_neighbors_by_t[[k]]$n_total_t <- int_and_neighbors_t$n_total_t
+        }
         
       }
       
@@ -156,7 +160,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       res[, k] <- c(length(sup_t), length(exp_t), length(inf_t), length(actors) - length(c(sup_t, exp_t, inf_t)))
       
       if(length(int_and_neighbors_t$neighbors) > 0){
-        # Count number of interactions by actor
+        # Track average number of interactions at time point
         n_interactions <- int_and_neighbors_t$n_total_t
         average_interaction[k] <- sum(n_interactions)/length(actors) # not just mean(n_interactions) as we want to include the 0's
         
@@ -331,8 +335,6 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
         
         symptom_infect_t <- potential_qua_t[unname(dur_symptom_infect_t)]
         
-        ####### need to add check if infected is already quarantined ########
-          
         if(length(symptom_infect_t) > 0){
           
           if(length(clusters) > 1){
@@ -367,15 +369,27 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
             index_current <- k
             one_hop <- unique(unlist(lapply(copy_int_and_neighbors_by_t[max(index_current-digital_contact_tracing_look_back, 1):index_current],
                                             FUN = function(x){
-                                              one_hop_ints <- unlist(unname(x$neighbors[symptom_infect_t]))
+                                              one_hop_ints <- unlist(unname(x$neighbors[symptom_infect_t])) # find "true" 1-hop neighbors of symptomatic actors, note
+                                                                                                            # using copy_int_and_neighbors_by_t already removes interactions
+                                                                                                            # of quarantined actors at time t
+                                              non_interactions <- setdiff(names(actors), c(unique(names(one_hop_ints)), qua_t)) # find "true" non-interactions, exclude quarantined
+                                              
                                               if(!is.null(one_hop_ints) && length(one_hop_ints) > 0) {
                                                 one_hop_ints_total <- tapply(one_hop_ints, names(one_hop_ints), sum)
-                                                one_hop_ints_prob_at_least_one_int_capture <- 1-((1-digital_contact_tracing_accuracy)^one_hop_ints_total)
+                                                one_hop_ints_prob_at_least_one_int_capture <- 1-((1-DCT_sensitivity)^one_hop_ints_total)
                                                 one_hop_ints_at_least_one_int_capture <- runif(n = length(one_hop_ints_total)) < one_hop_ints_prob_at_least_one_int_capture
-                                                return(unique(names(one_hop_ints_at_least_one_int_capture[one_hop_ints_at_least_one_int_capture])))
+                                                one_hop_ints_at_least_one_int_capture <- unique(names(one_hop_ints_at_least_one_int_capture[one_hop_ints_at_least_one_int_capture]))
                                               } else {
-                                                return(NULL)
-                                              }}),
+                                                one_hop_ints_at_least_one_int_capture <- NULL
+                                              }
+                                              
+                                              if(!is.null(non_interactions) && length(non_interactions) > 0) {
+                                                false_positive <- non_interactions[runif(n = length(non_interactions)) < (1-DCT_specificity)]
+                                              } else {
+                                                false_positive <- NULL
+                                              }
+                                              return(unique(c(one_hop_ints_at_least_one_int_capture, false_positive)))
+                                            }),
                                      use.names = FALSE))
             
             ## Quarantine actors include those infected and their one-hop neighbors
