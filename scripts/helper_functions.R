@@ -378,7 +378,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                               one_hop_ints <- unlist(unname(ints_t$neighbors[symptom_infect_t])) # find "true" 1-hop neighbors of symptomatic actors, note
                                                                                                             # using copy_int_and_neighbors_by_t already removes interactions
                                                                                                             # of quarantined actors at time t
-                                              non_interactions <- setdiff(names(actors), c(unique(names(one_hop_ints), 
+                                              non_interactions <- setdiff(names(actors), unique(c(names(one_hop_ints), 
                                                                                                   symptom_infect_t,
                                                                                                   quarantined_t))) # find "true" non-interactions
                                               
