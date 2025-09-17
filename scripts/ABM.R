@@ -108,7 +108,7 @@ cores <- 100L
 for (p_asym in p_asym_seq){
   for (quarantine_days in quarantine_days_seq){
     for (DCT_sensitivity in DCT_sensitivity_seq){
-      for (DCT_specificity in DCT_specificity_seq)
+      for (DCT_specificity in DCT_specificity_seq){
       
       ## Run ABM with no intervention 
       set.seed(1234, kind = "L'Ecuyer-CMRG")
@@ -325,6 +325,7 @@ for (p_asym in p_asym_seq){
       #      R0_est_only_seed_infected,
       #      file = "test.run.RData")
       
+      }
     }
   }
 }
