@@ -300,27 +300,30 @@ for (p_asym in p_asym_seq){
                                               mc.preschedule = TRUE,
                                               mc.cores = cores)
       
-      # saveRDS(list(run_ABM_no_intervention = run_ABM_no_intervention,
-      #              run_ABM_isolate_individuals = run_ABM_isolate_individuals,
-      #              run_ABM_accounting_for_noise = run_ABM_accounting_for_noise,
-      #              run_ABM_random_lshm = run_ABM_random_lshm,
-      #              run_ABM_ignore_noise = run_ABM_ignore_noise, 
-      #              run_ABM_dichotomize_g_1 = run_ABM_dichotomize_g_1,
-      #              run_ABM_fb_clusters = run_ABM_fb_clusters, 
-      #              run_ABM_random_fb = run_ABM_random_fb,
-      #              R0_est_only_seed_infected = R0_est_only_seed_infected,
-      #              quarantine_days = quarantine_days,
-      #              p_asym = p_asym,
-      #              DCT_sensitivity = DCT_sensitivity,
-      #              DCT_specificity = DCT_specificity),
-      #         file = paste0("qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
+      res <- list(run_ABM_no_intervention = run_ABM_no_intervention,
+                  run_ABM_isolate_individuals = run_ABM_isolate_individuals,
+                  run_ABM_accounting_for_noise = run_ABM_accounting_for_noise,
+                  run_ABM_random_lshm = run_ABM_random_lshm,
+                  run_ABM_ignore_noise = run_ABM_ignore_noise,
+                  run_ABM_dichotomize_g_1 = run_ABM_dichotomize_g_1,
+                  run_ABM_fb_clusters = run_ABM_fb_clusters,
+                  run_ABM_random_fb = run_ABM_random_fb,
+                  R0_est_only_seed_infected = R0_est_only_seed_infected,
+                  quarantine_days = quarantine_days,
+                  p_asym = p_asym,
+                  DCT_sensitivity = DCT_sensitivity,
+                  DCT_specificity = DCT_specificity)
       
-      save(run_ABM_no_intervention, run_ABM_isolate_individuals,
-           run_ABM_accounting_for_noise, run_ABM_random_lshm,
-           run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
-           run_ABM_fb_clusters, run_ABM_random_fb,
-           R0_est_only_seed_infected,
-           file = "test.run.RData")
+      saveRDS(res,
+              file = paste0("res_out/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
+
+      print(paste0("qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, " saved"))
+      # save(run_ABM_no_intervention, run_ABM_isolate_individuals,
+      #      run_ABM_accounting_for_noise, run_ABM_random_lshm,
+      #      run_ABM_ignore_noise, run_ABM_dichotomize_g_1,
+      #      run_ABM_fb_clusters, run_ABM_random_fb,
+      #      R0_est_only_seed_infected,
+      #      file = "test.run.RData")
       
     }
   }
