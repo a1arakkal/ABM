@@ -46,7 +46,7 @@ mean_infected_days <- c("asymptomatic" = 10L,
                         "symptomatic" = 5L)
 
 # prob of being asymptomatic given infected
-p_asym_seq <- seq(0, 1, by = 0.1) # if 0 all infections are symptomatic
+p_asym_seq <- seq(0, 1, by = 0.2) # if 0 all infections are symptomatic
 
 # Initilize actors
 actor_labels <- 1:total_actors
@@ -68,8 +68,8 @@ min_degree_t1 <- 0
 digital_contact_tracing_look_back <- 4
 
 # Sensitivity and specificity of digital contact tracing if used as intervention (allows for false positives and false negatives)
-DCT_sensitivity_seq  <- seq(0, 1, by = .25)
-DCT_specificity_seq  <- seq(0, 1, by = .25)
+DCT_sensitivity_seq  <- c(0, seq(.6, 1, by = .1))
+DCT_specificity_seq  <- c(0, seq(.6, 1, by = .1))
 
 # test <- run_single_ABM(p_infected = p_infected,
 #                        mean_exposure_days = mean_exposure_days,
