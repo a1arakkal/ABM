@@ -130,6 +130,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
       
       # remove interations for those quarantined
       if(length(qua_t) > 0){
+        
         int_and_neighbors_t$neighbors <- int_and_neighbors_t$neighbors[setdiff(names(int_and_neighbors_t$neighbors), qua_t)] 
 
         if(length(int_and_neighbors_t$neighbors) > 0){
@@ -381,7 +382,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                               non_interactions <- setdiff(names(actors), unique(c(names(one_hop_ints), 
                                                                                                   symptom_infect_t,
                                                                                                   quarantined_t))) # find "true" non-interactions
-                                              
+                                        
                                               if(!is.null(one_hop_ints) && length(one_hop_ints) > 0) {
                                                 one_hop_ints_total <- tapply(one_hop_ints, names(one_hop_ints), sum)
                                                 one_hop_ints_prob_at_least_one_int_capture <- 1-((1-DCT_sensitivity)^one_hop_ints_total)
@@ -392,9 +393,40 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                                               }
                                               
                                               if(!is.null(non_interactions) && length(non_interactions) > 0) {
-                                                false_positive <- non_interactions[runif(n = length(non_interactions)) < (1-DCT_specificity)]
+                                               
+                                                # compute degree of all
+                                                degree_all <- sapply(names(actors), FUN = function(x){
+                                                  if(!is.null(ints_t$neighbors[[x]])){
+                                                    length(ints_t$neighbors[[x]])
+                                                  } else {
+                                                    0
+                                                  }})
+                                                
+                                                # total number of edges (i.e. 2 times |E| as undirected)
+                                                M <- sum(degree_all)
+                                                
+                                                # compute degree non-interactions
+                                                degree_non_int <- degree_all[non_interactions]
+                                                degree_non_int <- degree_non_int[degree_non_int > 0]
+                                                
+                                                # degree of symptomatic
+                                                degree_sym <- degree_all[symptom_infect_t]
+                                                degree_sym <- degree_sym[degree_sym > 0]
+                                                
+                                                probs_false_positive <- rep(1, length(degree_non_int))
+                                                
+                                                for (i in degree_sym){
+                                                  probs_false_positive <- probs_false_positive * ( 1 - ( (1-DCT_specificity)*((2*degree_non_int*i)/(M)) ) )
+                                                }
+                                                
+                                                probs_false_positive <- 1-probs_false_positive
+                                                
+                                                false_positive <- unique(names(probs_false_positive)[runif(n = length(probs_false_positive)) < probs_false_positive])
+                                                
                                               } else {
+                                                
                                                 false_positive <- NULL
+                                                
                                               }
                                               
                                               return(unique(c(one_hop_ints_at_least_one_int_capture, false_positive)))
