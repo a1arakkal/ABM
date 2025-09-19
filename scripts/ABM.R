@@ -314,8 +314,10 @@ for (p_asym in p_asym_seq){
                   DCT_sensitivity = DCT_sensitivity,
                   DCT_specificity = DCT_specificity)
       
+      #note res_out folder assumes prob false postive = 1-p_sen same for all non-ints.
+      
       saveRDS(res,
-              file = paste0("res_out/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
+              file = paste0("res_out_false_pos_degree/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
 
       print(paste0("qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, " saved"))
       # save(run_ABM_no_intervention, run_ABM_isolate_individuals,
