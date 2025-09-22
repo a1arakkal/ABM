@@ -194,9 +194,10 @@ for (p_asym in p_asym_seq){
                                                 FUN = function(x){
                                                   
                                                   #random clusters same size as lshm clusters
-                                                  clusters_random_lshm <- rmultinom(total_actors, 1, prob = prop.table(table(clusters_accounting_for_noise)))
+                                                  non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
+                                                  clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_accounting_for_noise)))
                                                   clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
-                                                  names(clusters_random_lshm) <- as.character(1:total_actors)
+                                                  names(clusters_random_lshm) <- non_isolates
                                                   
                                                   run_single_ABM(p_infected = p_infected,
                                                                  mean_exposure_days = mean_exposure_days, 
@@ -278,10 +279,10 @@ for (p_asym in p_asym_seq){
                                               FUN = function(x){
                                                 
                                                 #random clusters same size as fb clusters
-                                                clusters_random_fb <- rmultinom(total_actors, 1, prob = prop.table(table(clusters_fb_network)))
+                                                non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_fb_network) ]
+                                                clusters_random_fb <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_fb_network)))
                                                 clusters_random_fb <- apply(clusters_random_fb , 2, which.max)
-                                                names(clusters_random_fb) <- as.character(1:total_actors)
-                                                
+                                                names(clusters_random_fb) <- non_isolates
                                                 
                                                 run_single_ABM(p_infected = p_infected,
                                                                mean_exposure_days = mean_exposure_days, 

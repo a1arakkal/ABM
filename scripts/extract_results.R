@@ -56,7 +56,6 @@ extract_function <- function(run_ABM){
   
   out <- bind_rows(out, quarantined_time)
   
-  
   # Max incidence across trials ----------------------------------------------
   incidence_max_stats <- boxplot.stats(do.call("c", lapply(run_ABM, function(x){max(x$incidence)})))
   incidence_max <- tibble(
@@ -81,13 +80,43 @@ extract_function <- function(run_ABM){
   
   out <- bind_rows(out, incidence_time)
   
+  # Loss function 1: total infections/total person days outside quarnatine
+  incidence_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$incidence}))
+  incidence_total <- apply(incidence_time_stats, 2, FUN = sum)
+  
+  quarantined_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$quarantined}))
+  quarantined_total <- apply(quarantined_time_stats, 2, FUN = sum)
+  person_time_outside_quarantine <- (692*nrow(quarantined_time_stats))-quarantined_total
+  
+  tot_inf_by_person_days_outside_qua <- boxplot.stats(incidence_total/person_time_outside_quarantine)$stats
+  tot_inf_by_person_days_outside_qua <- as_tibble(t(tot_inf_by_person_days_outside_qua))
+  colnames(tot_inf_by_person_days_outside_qua) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  tot_inf_by_person_days_outside_qua <- tot_inf_by_person_days_outside_qua%>% 
+    mutate(metric = "tot_inf_by_person_days_outside_qua")
+  
+  out <- bind_rows(out, tot_inf_by_person_days_outside_qua)
+  
+  # Loss function 2: total infections/total number of contacts 
+  
+  contacts_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$average_interaction*692})) # average_interaction[k] <- sum(n_interactions)/length(actors) 
+  contacts_total <- apply(contacts_time_stats, 2, FUN = sum)
+  
+  tot_inf_by_by_contacts <- boxplot.stats(incidence_total/contacts_total)$stats
+  tot_inf_by_by_contacts <- as_tibble(t(tot_inf_by_by_contacts))
+  colnames(tot_inf_by_by_contacts) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  tot_inf_by_by_contacts <- tot_inf_by_by_contacts%>% 
+    mutate(metric = "tot_inf_by_by_contacts")
+  
+  out <- bind_rows(out, tot_inf_by_by_contacts)
+  
   return(out)
   
 }
 
 # Extract Results --------------------------------------------------------------
 
-setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out")
+# setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out")
+setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out_false_pos_degree")
 files <- list.files()
 files <- setdiff(files, "main_res.RData")
 

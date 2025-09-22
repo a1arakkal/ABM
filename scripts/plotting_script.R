@@ -5,7 +5,8 @@ library(tidyverse)
 
 # Load data --------------------------------------------------------------------
 
-setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out")
+# setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out")
+setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out_false_pos_degree")
 load("main_res.RData")
 
 # Create nice labels -----------------------------------------------------------
@@ -54,7 +55,9 @@ nice_metric <- tibble(
              "quarantined_max",
              "quarantined_rate",
              "incidence_time",
-             "quarantined_time"),
+             "quarantined_time",
+             "tot_inf_by_by_contacts",
+             "tot_inf_by_person_days_outside_qua"),
   label = c("R0",
             "Attack Rate (%)",
             "Average cumulative number of contacts per actor",
@@ -63,7 +66,9 @@ nice_metric <- tibble(
             "Max number of actors quarantined at any one time",
             "Percent of actors ever quarantined",
             "Median number of incident cases by days",
-            "Median number of actors in quarantined by days")
+            "Median number of actors in quarantined by days",
+            "Ratio of total number of infections by total number of contacts",
+            "Ratio of total number of infections by total person-days of freedom")
 )
   
 # Plot function  ---------------------------------------------------------------
@@ -75,12 +80,14 @@ plot_fun <- function(metric_val,
                      DCT_specificity_val =  c(0, 0.6, 0.8, 1)){
   
   if(metric_val %in% c("R0",
-                        "attack_rate",
-                        "average_cumulative_interactions_per_actor",
-                        "average_time_in_quarantine",
-                        "incidence_max",
-                        "quarantined_max",
-                        "quarantined_rate")){
+                       "attack_rate",
+                       "average_cumulative_interactions_per_actor",
+                       "average_time_in_quarantine",
+                       "incidence_max",
+                       "quarantined_max",
+                       "quarantined_rate",
+                       "tot_inf_by_by_contacts",
+                       "tot_inf_by_person_days_outside_qua")){
     
     if(length(quarantine_days_val) > 1){
       stop("Please supply single value for quarantine_days_val")
@@ -191,9 +198,12 @@ plot_fun <- function(metric_val,
 # "quarantined_rate"
 # "incidence_time"
 # "quarantined_time"
+# "tot_inf_by_by_contacts"
+# "tot_inf_by_person_days_outside_qua"
 
-plot_fun("attack_rate",
+plot_fun("tot_inf_by_by_contacts",
          # p_asym_val = 0,
+         DCT_specificity = 1,
          quarantine_days_val = 5)
 
 plot_fun("quarantined_time",
