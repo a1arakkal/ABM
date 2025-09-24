@@ -57,7 +57,11 @@ nice_metric <- tibble(
              "incidence_time",
              "quarantined_time",
              "tot_inf_by_by_contacts",
-             "tot_inf_by_person_days_outside_qua"),
+             "tot_inf_by_person_days_outside_qua",
+             "total_inf",
+             "quarantined_total_person_days",
+             "total_contacts",
+             "efficiency_per_contact"),
   label = c("R0",
             "Attack Rate (%)",
             "Average cumulative number of contacts per actor",
@@ -68,7 +72,11 @@ nice_metric <- tibble(
             "Median number of incident cases by days",
             "Median number of actors in quarantined by days",
             "Ratio of total number of infections by total number of contacts",
-            "Ratio of total number of infections by total person-days of freedom")
+            "Ratio of total number of infections by total person-days of freedom",
+            "Total number of infections",
+            "Total number of quarantined person-days",
+            "Total number of contacts",
+            "Total infections prevented by total contacts prevented (compared to baseline)")
 )
   
 # Plot function  ---------------------------------------------------------------
@@ -87,14 +95,18 @@ plot_fun <- function(metric_val,
                        "quarantined_max",
                        "quarantined_rate",
                        "tot_inf_by_by_contacts",
-                       "tot_inf_by_person_days_outside_qua")){
+                       "tot_inf_by_person_days_outside_qua",
+                       "total_inf",
+                       "quarantined_total_person_days",
+                       "total_contacts",
+                       "efficiency_per_contact")){
     
     if(length(quarantine_days_val) > 1){
       stop("Please supply single value for quarantine_days_val")
     }
     
     main_res %>% 
-      filter(p_asym %in% p_asym_val) %>% 
+      filter(round(p_asym, 1) %in% p_asym_val) %>% 
       filter(DCT_sensitivity %in% DCT_sensitivity_val) %>% 
       filter(DCT_specificity %in% DCT_specificity_val) %>% 
       filter(!type %in% c("run_ABM_dichotomize_g_1",
@@ -200,8 +212,37 @@ plot_fun <- function(metric_val,
 # "quarantined_time"
 # "tot_inf_by_by_contacts"
 # "tot_inf_by_person_days_outside_qua"
+# "total_inf"
+# "quarantined_total_person_days"
+# "total_contacts"
+# "efficiency_per_contact"
 
 plot_fun("tot_inf_by_by_contacts",
+         p_asym_val = c(0, .2, .4, .6, .8),
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("total_contacts",
+         p_asym_val = c(0, .2, .4, .6, .8),
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("total_inf",
+         p_asym_val = c(0, .2, .4, .6, .8),
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("quarantined_total_person_days",
+         p_asym_val = c(0, .2, .4, .6, .8),
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("tot_inf_by_by_contacts",
+         p_asym_val = c(0, .2, .4, .6, .8),
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("quarantined_total_person_days",
          # p_asym_val = 0,
          DCT_specificity = 1,
          quarantine_days_val = 5)

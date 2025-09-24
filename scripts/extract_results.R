@@ -17,7 +17,7 @@ box_plot_fun <- function(y, name){
     mutate(metric = name)
 }
 
-extract_function <- function(run_ABM){
+extract_function <- function(run_ABM, baseline){
   
   n_trial <- length(run_ABM)
   
@@ -94,7 +94,22 @@ extract_function <- function(run_ABM){
   tot_inf_by_person_days_outside_qua <- tot_inf_by_person_days_outside_qua%>% 
     mutate(metric = "tot_inf_by_person_days_outside_qua")
   
-  out <- bind_rows(out, tot_inf_by_person_days_outside_qua)
+  tot_inf <- boxplot.stats(incidence_total)$stats
+  tot_inf <- as_tibble(t(tot_inf))
+  colnames(tot_inf) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  tot_inf <- tot_inf%>% 
+    mutate(metric = "total_inf")
+  
+  quarantined_total <- boxplot.stats(quarantined_total)$stats
+  quarantined_total <- as_tibble(t(quarantined_total))
+  colnames(quarantined_total) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  quarantined_total <- quarantined_total%>% 
+    mutate(metric = "quarantined_total_person_days")
+  
+  out <- bind_rows(out, 
+                   tot_inf_by_person_days_outside_qua,
+                   tot_inf,
+                   quarantined_total)
   
   # Loss function 2: total infections/total number of contacts 
   
@@ -107,7 +122,46 @@ extract_function <- function(run_ABM){
   tot_inf_by_by_contacts <- tot_inf_by_by_contacts%>% 
     mutate(metric = "tot_inf_by_by_contacts")
   
-  out <- bind_rows(out, tot_inf_by_by_contacts)
+  tot_contacts <- boxplot.stats(contacts_total)$stats
+  tot_contacts <- as_tibble(t(tot_contacts))
+  colnames(tot_contacts) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  tot_contacts <- tot_contacts%>% 
+    mutate(metric = "total_contacts")
+  
+  out <- bind_rows(out, 
+                   tot_inf_by_by_contacts,
+                   tot_contacts)
+  
+  # Loss function 3: total infections prevent (i.e., I no inverention - I intevention)/ total contact prevented  (i.e., C no inverention - C intevention)
+  incidence_time_stats_baseline <- do.call("cbind", lapply(baseline, function(x){x$incidence}))
+  incidence_total_baseline <- apply(incidence_time_stats_baseline, 2, FUN = sum)
+
+  contacts_time_stats_baseline <- do.call("cbind", lapply(baseline, function(x){x$average_interaction*692})) # average_interaction[k] <- sum(n_interactions)/length(actors) 
+  contacts_total_baseline <- apply(contacts_time_stats_baseline, 2, FUN = sum)
+  
+  incidence_diff <- (incidence_total_baseline)-(incidence_total)
+  contact_diff <- (contacts_total_baseline)-(contacts_total) + 1e-6
+  efficiency_per_contact <- incidence_diff[incidence_diff>=0]/contact_diff[incidence_diff>=0]
+  
+  efficiency_per_contact <- boxplot.stats(efficiency_per_contact)$stats
+  efficiency_per_contact <- as_tibble(t(efficiency_per_contact))
+  colnames(efficiency_per_contact) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  efficiency_per_contact <- efficiency_per_contact%>% 
+    mutate(metric = "efficiency_per_contact")
+  
+  mean_inc_baseline <- mean(incidence_total_baseline)
+  mean_inc_intervention <- mean(incidence_total)
+  mean_contacts_baseline <- mean(contacts_total_baseline)
+  mean_contacts_intervention <- mean(contacts_total)
+  mean_efficiency <- (mean_inc_baseline - mean_inc_intervention) / 
+    (mean_contacts_baseline - mean_contacts_intervention + 1e-6)
+  
+  mean_efficiency_per_contact <- tibble(mean = mean_efficiency) %>% 
+    mutate(metric = "mean_efficiency_per_contact")
+  
+  out <- bind_rows(out, 
+                   efficiency_per_contact,
+                   mean_efficiency_per_contact)
   
   return(out)
   
@@ -126,7 +180,8 @@ outer_fun <- function(file_name){
     data_list <- readRDS(file_name)
     
     out <- tibble(type = names(data_list)[stringr::str_detect(names(data_list), pattern = "run_ABM")]) %>% 
-      mutate(res = map(type, ~extract_function(data_list[[.]]))) %>% 
+      mutate(res = map(type, ~extract_function(run_ABM = data_list[[.]],
+                                               baseline = data_list[["run_ABM_no_intervention"]]))) %>% 
       unnest(res) %>% 
       mutate(quarantine_days = data_list[["quarantine_days"]],
              p_asym = data_list[["p_asym"]],

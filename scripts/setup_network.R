@@ -175,7 +175,7 @@ save(int_and_neighbors_by_t, total_actors, file = "int_and_neighbors_by_t.RData"
 #   count(user_a,user_b)
 
 cns_el <- interactions %>% 
-  filter(timestamp <= 28/2) %>% # subset to interaction in first w weeks
+  filter(timestamp <= 28/2) %>% # subset to interaction in first 2 weeks
   group_by(user_a, user_b) %>% 
   summarise(n = sum(n), .groups = "drop")
 
