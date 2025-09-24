@@ -394,7 +394,7 @@ for (p_asym in p_asym_seq){
       res$run_ABM_random_lshm_size_and_number <- run_ABM_random_lshm_size_and_number
       
       saveRDS(res,
-              file = paste0("res_out_false_pos_degree/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
+              file = paste0("res_out_false_pos_degree_diff_random_clust/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
       
       
       }
