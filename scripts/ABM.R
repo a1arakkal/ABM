@@ -188,41 +188,39 @@ for (p_asym in p_asym_seq){
       #                                                    mc.preschedule = TRUE,
       #                                                    mc.cores = cores)
       # 
-      # ## Run ABM with random clusters similar size to clustering accounting for noise (allow different assignment for each run)
-      # set.seed(1234, kind = "L'Ecuyer-CMRG")
-      # run_ABM_random_lshm <- parallel::mclapply(1:n_trial,
-      #                                           FUN = function(x){
-      #                                             
-      #                                             #random clusters same size as lshm clusters
-      #                                             non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
-      #                                             clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_accounting_for_noise)))
-      #                                             clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
-      #                                             names(clusters_random_lshm) <- non_isolates
-      #                                             
-      #                                             run_single_ABM(p_infected = p_infected,
-      #                                                            mean_exposure_days = mean_exposure_days, 
-      #                                                            mean_infected_days = mean_infected_days,
-      #                                                            actor_labels = actor_labels,
-      #                                                            min_degree_t1 = min_degree_t1,
-      #                                                            timesteps = timesteps,
-      #                                                            n_repeat = n_repeat,
-      #                                                            p_asym = p_asym,
-      #                                                            clusters = clusters_random_lshm,
-      #                                                            quarantine_days = quarantine_days,
-      #                                                            digital_contact_tracing_look_back = digital_contact_tracing_look_back,
-      #                                                            DCT_sensitivity = DCT_sensitivity,
-      #                                                            DCT_specificity = DCT_specificity)},
-      #                                           
-      #                                           mc.preschedule = TRUE,
-      #                                           mc.cores = cores)
+      ## Run ABM with random clusters similar size to clustering accounting for noise (allow different assignment for each run)
+      set.seed(1234, kind = "L'Ecuyer-CMRG")
+      run_ABM_random_lshm <- parallel::mclapply(1:n_trial,
+                                                FUN = function(x){
+
+                                                  #random clusters same size as lshm clusters
+                                                  clusters_random_lshm <- clusters_accounting_for_noise
+                                                  permute <- sample(names(clusters_random_lshm), size = length(clusters_random_lshm), replace = FALSE)
+                                                  names(clusters_random_lshm) <- permute
+
+                                                  run_single_ABM(p_infected = p_infected,
+                                                                 mean_exposure_days = mean_exposure_days,
+                                                                 mean_infected_days = mean_infected_days,
+                                                                 actor_labels = actor_labels,
+                                                                 min_degree_t1 = min_degree_t1,
+                                                                 timesteps = timesteps,
+                                                                 n_repeat = n_repeat,
+                                                                 p_asym = p_asym,
+                                                                 clusters = clusters_random_lshm,
+                                                                 quarantine_days = quarantine_days,
+                                                                 digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                                 DCT_sensitivity = DCT_sensitivity,
+                                                                 DCT_specificity = DCT_specificity)},
+
+                                                mc.preschedule = TRUE,
+                                                mc.cores = cores)
 
       ## Run ABM with random clusters similar size to clustering accounting for noise (require same assignment for each run)
       #random clusters same size as lshm clusters
       set.seed(1234, kind = "L'Ecuyer-CMRG")
-      non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
-      clusters_random_lshm2 <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_accounting_for_noise)))
-      clusters_random_lshm2 <- apply(clusters_random_lshm2 , 2, which.max)
-      names(clusters_random_lshm2) <- non_isolates
+      clusters_random_lshm2 <- clusters_accounting_for_noise
+      permute <- sample(names(clusters_random_lshm2), size = length(clusters_random_lshm2), replace = FALSE)
+      names(clusters_random_lshm2) <- permute
       
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_random_lshm_outside <- parallel::mclapply(1:n_trial,
@@ -252,7 +250,7 @@ for (p_asym in p_asym_seq){
                                                   
                                                   n_clusters <- sample(2:10, size = 1, replace = F)
                                                   p_clust <- extraDistr::rdirichlet(1, rep(3, n_clusters))
-                                                  non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
+                                                  non_isolates <- names(clusters_accounting_for_noise)
                                                   clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = p_clust)
                                                   clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
                                                   names(clusters_random_lshm) <- non_isolates
@@ -331,33 +329,32 @@ for (p_asym in p_asym_seq){
       #                                           mc.preschedule = TRUE,
       #                                           mc.cores = cores)
       # 
-      # ## Run ABM with clustering on random partition similar size as FB clusters
-      # set.seed(1234, kind = "L'Ecuyer-CMRG")
-      # run_ABM_random_fb <- parallel::mclapply(1:n_trial,
-      #                                         FUN = function(x){
-      #                                           
-      #                                           #random clusters same size as fb clusters
-      #                                           non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_fb_network) ]
-      #                                           clusters_random_fb <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_fb_network)))
-      #                                           clusters_random_fb <- apply(clusters_random_fb , 2, which.max)
-      #                                           names(clusters_random_fb) <- non_isolates
-      #                                           
-      #                                           run_single_ABM(p_infected = p_infected,
-      #                                                          mean_exposure_days = mean_exposure_days, 
-      #                                                          mean_infected_days = mean_infected_days,
-      #                                                          actor_labels = actor_labels,
-      #                                                          min_degree_t1 = min_degree_t1,
-      #                                                          timesteps = timesteps,
-      #                                                          n_repeat = n_repeat,
-      #                                                          p_asym = p_asym,
-      #                                                          clusters = clusters_random_fb,
-      #                                                          quarantine_days = quarantine_days,
-      #                                                          digital_contact_tracing_look_back = digital_contact_tracing_look_back,
-      #                                                          DCT_sensitivity = DCT_sensitivity,
-      #                                                          DCT_specificity = DCT_specificity)},
-      #                                         
-      #                                         mc.preschedule = TRUE,
-      #                                         mc.cores = cores)
+      ## Run ABM with clustering on random partition similar size as FB clusters
+      set.seed(1234, kind = "L'Ecuyer-CMRG")
+      run_ABM_random_fb <- parallel::mclapply(1:n_trial,
+                                              FUN = function(x){
+
+                                                #random clusters same size as fb clusters
+                                                clusters_random_fb <- clusters_fb_network
+                                                permute <- sample(names(clusters_random_fb), size = length(clusters_random_fb), replace = FALSE)
+                                                names(clusters_random_fb) <- permute
+                                                
+                                                run_single_ABM(p_infected = p_infected,
+                                                               mean_exposure_days = mean_exposure_days,
+                                                               mean_infected_days = mean_infected_days,
+                                                               actor_labels = actor_labels,
+                                                               min_degree_t1 = min_degree_t1,
+                                                               timesteps = timesteps,
+                                                               n_repeat = n_repeat,
+                                                               p_asym = p_asym,
+                                                               clusters = clusters_random_fb,
+                                                               quarantine_days = quarantine_days,
+                                                               digital_contact_tracing_look_back = digital_contact_tracing_look_back,
+                                                               DCT_sensitivity = DCT_sensitivity,
+                                                               DCT_specificity = DCT_specificity)},
+
+                                              mc.preschedule = TRUE,
+                                              mc.cores = cores)
       
       # res <- list(run_ABM_no_intervention = run_ABM_no_intervention,
       #             run_ABM_isolate_individuals = run_ABM_isolate_individuals,
@@ -392,6 +389,8 @@ for (p_asym in p_asym_seq){
       
       res$run_ABM_random_lshm_outside <- run_ABM_random_lshm_outside
       res$run_ABM_random_lshm_size_and_number <- run_ABM_random_lshm_size_and_number
+      res$run_ABM_random_lshm <- run_ABM_random_lshm
+      res$run_ABM_random_fb <- run_ABM_random_fb
       
       saveRDS(res,
               file = paste0("res_out_false_pos_degree_diff_random_clust/qdays_", quarantine_days, "_pasym_", p_asym, "_DTCspec_", DCT_specificity, "_DTCsen_", DCT_sensitivity, ".RDS"))
