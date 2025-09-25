@@ -132,13 +132,31 @@ for (t in names(int_and_neighbors_by_t_only_between)){
 }
 
 
-nice_fun <- function(network, clusters){
+nice_fun <- function(network, cluster_labels){
   
   assign("int_and_neighbors_by_t", network, envir = .GlobalEnv) # will add as argument to run_single_ABM
   ## Run ABM with clustering accounting for noise
   set.seed(1234, kind = "L'Ecuyer-CMRG")
   run_ABM <- parallel::mclapply(1:n_trial,
                                 FUN = function(x){
+                                  
+                                  if(cluster_labels == "lshm"){
+                                    clusters <- clusters_accounting_for_noise
+                                  } else if(cluster_labels == "random_perm") {
+                                    clusters_random_lshm <- clusters_accounting_for_noise
+                                    permute <- sample(names(clusters_random_lshm), size = length(clusters_random_lshm), replace = FALSE)
+                                    names(clusters_random_lshm) <- permute
+                                    clusters <- clusters_random_lshm
+                                  } else if (cluster_labels == "random"){
+                                    non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
+                                    clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_accounting_for_noise)))
+                                    clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
+                                    names(clusters_random_lshm) <- non_isolates
+                                    clusters <- clusters_random_lshm
+                                  } else {
+                                    clusters <-NULL
+                                  }
+                                  
                                   run_single_ABM(p_infected = p_infected,
                                                  mean_exposure_days = mean_exposure_days,
                                                  mean_infected_days = mean_infected_days,
@@ -171,39 +189,27 @@ nice_fun <- function(network, clusters){
   # cat("Total infections:", quantile((do.call("c", lapply(run_ABM, function(x){sum(x$incidence)} ))), probs = c(0.25, 0.5, 0.75)), "\n")
   # cat("Total contacts:", quantile((do.call("c", lapply(run_ABM, function(x){sum(x$average_interactions_by_time * 692)} ))), probs = c(0.25, 0.5, 0.75)), "\n")
   # cat("Person-days quarantined:", quantile((do.call("c", lapply(run_ABM, function(x){sum(x$quarantined)} ))), probs = c(0.25, 0.5, 0.75)) , "\n")
-  
+  return(res)
 }
 
 
 ## Run ABM with LSHM clustering accounting for noise on observed network
-p1 <- nice_fun(int_and_neighbors_by_t_true, clusters_accounting_for_noise)
+p1 <- nice_fun(int_and_neighbors_by_t_true, "lshm")
 
 ## Run ABM with LSHM clustering accounting for noise on network with only within cluster interaction
-p2 <- nice_fun(int_and_neighbors_by_t_only_within, clusters_accounting_for_noise)
+p2 <- nice_fun(int_and_neighbors_by_t_only_within, "lshm")
 
 ## Run ABM with LSHM clustering accounting for noise on network with only between cluster interaction
-p3 <- nice_fun(int_and_neighbors_by_t_only_between, clusters_accounting_for_noise)
-
-#random clusters same size as lshm clusters
-set.seed(1234, kind = "L'Ecuyer-CMRG")
-clusters_random_lshm <- clusters_accounting_for_noise
-permute <- sample(names(clusters_random_lshm), size = length(clusters_random_lshm), replace = FALSE)
-names(clusters_random_lshm) <- permute
-
-# set.seed(1234, kind = "L'Ecuyer-CMRG")
-# non_isolates <- as.character(1:total_actors)[ as.character(1:total_actors) %in% names(clusters_accounting_for_noise) ]
-# clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = prop.table(table(clusters_accounting_for_noise)))
-# clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
-# names(clusters_random_lshm) <- non_isolates
+p3 <- nice_fun(int_and_neighbors_by_t_only_between, "lshm")
 
 ## Run ABM with random clustering accounting for noise on observed network
-p4 <- nice_fun(int_and_neighbors_by_t_true, clusters_random_lshm)
+p4 <- nice_fun(int_and_neighbors_by_t_true, "random_perm")
 
 ## Run ABM with random clustering accounting for noise on network with only within cluster interaction
-p5 <- nice_fun(int_and_neighbors_by_t_only_within, clusters_random_lshm)
+p5 <- nice_fun(int_and_neighbors_by_t_only_within, "random_perm")
 
 ## Run ABM with random clustering accounting for noise on network with only between cluster interaction
-p6 <- nice_fun(int_and_neighbors_by_t_only_between, clusters_random_lshm)
+p6 <- nice_fun(int_and_neighbors_by_t_only_between, "random_perm")
 
 
 
