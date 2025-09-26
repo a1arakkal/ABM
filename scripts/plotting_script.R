@@ -6,7 +6,8 @@ library(tidyverse)
 # Load data --------------------------------------------------------------------
 
 # setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out")
-setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out_false_pos_degree")
+# setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out_false_pos_degree")
+setwd("/Volumes/argon_home/dissertation/real_data_application/paper3/res_out_false_pos_degree_diff_random_clust")
 load("main_res.RData")
 
 # Create nice labels -----------------------------------------------------------
@@ -17,6 +18,8 @@ nice_labels <- tibble(
     "run_ABM_isolate_individuals",
     "run_ABM_accounting_for_noise",
     "run_ABM_random_lshm",
+    "run_ABM_random_lshm_outside",
+    "run_ABM_random_lshm_size_and_number",
     "run_ABM_fb_clusters",
     "run_ABM_random_fb",
     "run_ABM_dichotomize_g_1",
@@ -27,6 +30,8 @@ nice_labels <- tibble(
     "Digital Contact Tracing",
     "Clustering - LSHM",
     "Clustering - Random LSHM",
+    "Clustering - Random (outside) LSHM",
+    "Clustering - Random (number and size) LSHM",
     "Clustering - FB",
     "Clustering - Random FB",
     "Clustering - Ignore Noise",

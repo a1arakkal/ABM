@@ -170,7 +170,8 @@ extract_function <- function(run_ABM, baseline){
 # Extract Results --------------------------------------------------------------
 
 # setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out")
-setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out_false_pos_degree")
+# setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out_false_pos_degree")
+setwd("/Users/atlan/dissertation/real_data_application/paper3/res_out_false_pos_degree_diff_random_clust")
 files <- list.files()
 files <- setdiff(files, "main_res.RData")
 

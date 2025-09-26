@@ -26,7 +26,7 @@ source("https://raw.githubusercontent.com/a1arakkal/ABM/refs/heads/master/script
 # Parameters ------------------------------------------------------------------
 
 # prob of transmisson among infected
-p_infected <- 0.01
+p_infected <- 0.0025
 
 # mean days exposed
 mean_exposure_days <- NULL # NULL is SIR model
@@ -44,7 +44,7 @@ actor_labels <- 1:total_actors
 
 # Clusters for quarantine
 # clusters <- clusters_accounting_for_noise # NULL no intervention, any unnamed vector of length 1 will isolate infected and their 1-hop neighbors
-quarantine_days <-5 # ignored if cluster is NULL (i.e., no intervention)
+quarantine_days <- 5 # ignored if cluster is NULL (i.e., no intervention)
 
 # N time-steps
 timesteps <- names(int_and_neighbors_by_t)
@@ -66,7 +66,6 @@ DCT_specificity_seq <- 1
 n_trial <- 1e3
 cores <- 100L
 
-clusters_accounting_for_noise
 
 # Only allow for interaction within clusters
 int_and_neighbors_by_t_only_within <- int_and_neighbors_by_t_true

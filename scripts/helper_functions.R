@@ -35,7 +35,8 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
                            timesteps, n_repeat, min_degree_t1,
                            p_asym, clusters, quarantine_days,
                            digital_contact_tracing_look_back,
-                           DCT_sensitivity, DCT_specificity){
+                           DCT_sensitivity, DCT_specificity,
+                           int_and_neighbors_by_t){
   
   # initialize actors
   actors <- initialize_actors(actor_labels)
