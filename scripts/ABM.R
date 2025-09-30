@@ -106,7 +106,7 @@ DCT_specificity_seq  <- c(0, seq(.6, 1, by = .1))
 # Run ABM for multiple trials --------------------------------------------------
 
 n_trial <- 1e3
-cores <- 200L
+cores <- 125L
 
 set.seed(1234, kind = "L'Ecuyer-CMRG")
 seeds <- sample.int(1e6, size = n_trial, replace = FALSE)
