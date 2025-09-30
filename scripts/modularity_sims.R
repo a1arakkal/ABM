@@ -286,9 +286,12 @@ digital_contact_tracing_look_back <- 4
 DCT_sensitivity <- 1
 DCT_specificity <- 1
 
-# Number of trails and number of cores
-n_trial <- 1000
-cores <- 100
+# Number of trials and number of cores
+n_trial <- 1e3
+cores <- 200L
+
+set.seed(1234, kind = "L'Ecuyer-CMRG")
+seeds <- sample.int(1e6, size = n_trial, replace = FALSE)
 
 for(p_asym in c(0, 0.4, 0.8)){
   for (c_labels in c("clusters_accounting_for_noise", "clusters_fb_network")){
@@ -322,9 +325,12 @@ for(p_asym in c(0, 0.4, 0.8)){
           break
         }
         
-        set.seed(1234, kind = "L'Ecuyer-CMRG")
         run_ABM_for_R0 <- parallel::mclapply(1:n_trial,
-                                             FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                             FUN = function(x){
+                                               
+                                               set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                               
+                                               run_single_ABM(p_infected = p_infected,
                                                                               mean_exposure_days = 1000, # makes it so seed is the only infective for duration of ABM
                                                                               mean_infected_days = mean_infected_days,
                                                                               actor_labels = actor_labels,
@@ -356,9 +362,10 @@ for(p_asym in c(0, 0.4, 0.8)){
       }
       
       ## Run ABM with clustering accounting for noise
-      set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM <- parallel::mclapply(1:n_trial,
                                     FUN = function(x){
+                                      
+                                      set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                       
                                       net_data <- adjust_modularity(network = network,
                                                                     total_actors = total_actors,
@@ -386,9 +393,10 @@ for(p_asym in c(0, 0.4, 0.8)){
       # apply(do.call("rbind", run_ABM), 2, quantile, probs = c(0.25,0.5,0.75))
       
       ## Run ABM with random clusters similar size to clustering accounting for noise (allow different assignment for each run)
-      set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_random <- parallel::mclapply(1:n_trial,
                                            FUN = function(x){
+                                             
+                                             set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                              
                                              net_data <- adjust_modularity(network = network,
                                                                            total_actors = total_actors,
