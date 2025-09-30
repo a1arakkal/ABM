@@ -44,6 +44,8 @@ nice_labels <- tibble(
                           "Digital Contact Tracing",
                           "Clustering - LSHM",
                           "Clustering - Random LSHM",
+                          "Clustering - Random (outside) LSHM",
+                          "Clustering - Random (number and size) LSHM",
                           "Clustering - FB",
                           "Clustering - Random FB",
                           "Clustering - Ignore Noise",
@@ -66,7 +68,12 @@ nice_metric <- tibble(
              "total_inf",
              "quarantined_total_person_days",
              "total_contacts",
-             "efficiency_per_contact"),
+             "efficiency_per_quarantined_person_day",
+             "mean_efficiency_per_quarantined_person_day",
+             "average_times_quarantined",
+             "attack_rate_vs_mean_quarantined_days",
+             "total_infections_vs_person_days_in_quarantine",
+             "infections_averted_vs_mean_quarantined_days"),
   label = c("R0",
             "Attack Rate (%)",
             "Average cumulative number of contacts per actor",
@@ -81,7 +88,12 @@ nice_metric <- tibble(
             "Total number of infections",
             "Total number of quarantined person-days",
             "Total number of contacts",
-            "Total infections prevented by total contacts prevented (compared to baseline)")
+            "Total infections prevented per quarantined person-day (compared to baseline)",
+            "Average total infections prevented per quarantined person-day (compared to baseline)",
+            "Average number of times quarantied (among those ever quarantined)",
+            "Attack rate by average time in quarantine",
+            "Total infections by person time in quarantine",
+            "Total infections prevented by average time in quarantine ")
 )
   
 # Plot function  ---------------------------------------------------------------
@@ -104,7 +116,8 @@ plot_fun <- function(metric_val,
                        "total_inf",
                        "quarantined_total_person_days",
                        "total_contacts",
-                       "efficiency_per_contact")){
+                       "efficiency_per_quarantined_person_day",
+                       "average_times_quarantined")){
     
     if(length(quarantine_days_val) > 1){
       stop("Please supply single value for quarantine_days_val")
@@ -151,8 +164,8 @@ plot_fun <- function(metric_val,
         y = filter(nice_metric, metric_val == metric) %>% .$label,
         title = paste0(filter(nice_metric, metric_val == metric) %>% .$label),
         subtitle = paste0("Quarantined days = ", quarantine_days_val)
-                       
       )
+    
   } else if (metric_val %in% c("quarantined_time", "incidence_time")){
     
     if(length(p_asym_val) > 1){
@@ -200,7 +213,156 @@ plot_fun <- function(metric_val,
                        p_asym_val)
       )
       
-  } else {
+  } else if (metric_val == "mean_efficiency_per_quarantined_person_day"){
+    
+    main_res %>% 
+      filter(p_asym %in% p_asym_val) %>% 
+      filter(p_asym<1) %>% 
+      filter(DCT_sensitivity %in% DCT_sensitivity_val) %>% 
+      filter(DCT_specificity %in% DCT_specificity_val) %>% 
+      filter(!type %in% c("run_ABM_dichotomize_g_1",
+                          "run_ABM_ignore_noise")) %>% 
+      inner_join(nice_labels, by = "type") %>% 
+      filter(quarantine_days == quarantine_days_val) %>% 
+      filter(metric == metric_val) %>% 
+      ggplot(aes(x = factor(p_asym), y = mean,
+                 color = label, group = label)) +
+      geom_line()+
+      ggh4x::facet_grid2(DCT_sensitivity ~ DCT_specificity,
+                         labeller = labeller(
+                           DCT_sensitivity = function(x) paste0("Sensitivity == ", x),
+                           DCT_specificity = function(x) paste0("Specificity == ", x),
+                           .default = label_parsed  # Needed to parse expressions
+                         ),
+                         scales = "free_y",
+                         independent = "y") +
+      theme_bw() +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major.x = element_blank()
+      ) +
+      labs(
+        x = "Asymptomatic Probability",
+        y = filter(nice_metric, metric_val == metric) %>% .$label,
+        title = paste0(filter(nice_metric, metric_val == metric) %>% .$label),
+        subtitle = paste0("Quarantined days = ", quarantine_days_val)
+      )
+    
+  } else if (metric_val == "attack_rate_vs_mean_quarantined_days"){
+    
+    if(length(quarantine_days_val) > 1){
+      stop("Please supply single value for quarantine_days_val")
+    }
+    
+    main_res %>% 
+      filter(round(p_asym, 1) %in% p_asym_val) %>% 
+      filter(DCT_sensitivity %in% DCT_sensitivity_val) %>% 
+      filter(DCT_specificity == 1 ) %>% 
+      mutate(p_asym = factor(p_asym)) %>% 
+      filter(!type %in% c("run_ABM_dichotomize_g_1",
+                          "run_ABM_ignore_noise")) %>% 
+      inner_join(nice_labels, by = "type") %>% 
+      filter(quarantine_days == quarantine_days_val) %>% 
+      filter(metric == metric_val) %>% 
+      ggplot(aes(x = mean_quarantined_days, y = attack_rates, color = label)) +
+      geom_point(alpha = 0.6) +
+      # geom_smooth(se = FALSE) +
+      ggh4x::facet_grid2(DCT_sensitivity ~p_asym ,
+                         labeller = labeller(
+                           DCT_sensitivity = function(x) paste0("Sensitivity == ", x),
+                           p_asym = function(x) paste0("Prob~asym. == ", x),
+                           .default = label_parsed  # Needed to parse expressions
+                         ),
+                         scales = "free_y") +
+      theme_bw() +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major.x = element_blank()
+      ) +
+      labs(x = "Mean Quarantine Days per Actor",
+           y = "Attack Rate",
+           title = paste0(filter(nice_metric, metric_val == metric) %>% .$label),
+           subtitle = paste0("Quarantined days = ", quarantine_days_val))
+    
+  } else if (metric_val == "total_infections_vs_person_days_in_quarantine"){
+    
+    if(length(quarantine_days_val) > 1){
+      stop("Please supply single value for quarantine_days_val")
+    }
+    
+    main_res %>% 
+      filter(round(p_asym, 1) %in% p_asym_val) %>% 
+      filter(DCT_sensitivity %in% DCT_sensitivity_val) %>% 
+      filter(DCT_specificity == 1 ) %>% 
+      filter(!type %in% c("run_ABM_dichotomize_g_1",
+                          "run_ABM_ignore_noise",
+                          "run_ABM_no_intervention")) %>% 
+      mutate(p_asym = factor(p_asym)) %>% 
+      inner_join(nice_labels, by = "type") %>% 
+      filter(quarantine_days == quarantine_days_val) %>% 
+      filter(metric == metric_val) %>% 
+      ggplot(aes(x = quarantined_total, y = incidence_total, color = label)) +
+      geom_point(alpha = 0.6) +
+      # geom_smooth(se = FALSE) +
+      ggh4x::facet_grid2(DCT_sensitivity ~p_asym ,
+                         labeller = labeller(
+                           DCT_sensitivity = function(x) paste0("Sensitivity == ", x),
+                           p_asym = function(x) paste0("Prob~asym. == ", x),
+                           .default = label_parsed  # Needed to parse expressions
+                         ),
+                         scales = "free_y") +
+      theme_bw() +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major.x = element_blank()
+      ) +
+      labs(x = "Total Quarantined Person-days",
+           y = "Total Number of Infections",
+           title = paste0(filter(nice_metric, metric_val == metric) %>% .$label),
+           subtitle = paste0("Quarantined days = ", quarantine_days_val))
+    
+  } else if (metric_val == "infections_averted_vs_mean_quarantined_days"){
+    
+    if(length(quarantine_days_val) > 1){
+      stop("Please supply single value for quarantine_days_val")
+    }
+    
+    main_res %>% 
+      filter(round(p_asym, 1) %in% p_asym_val) %>% 
+      filter(DCT_sensitivity %in% DCT_sensitivity_val) %>% 
+      filter(DCT_specificity == 1 ) %>% 
+      filter(!type %in% c("run_ABM_dichotomize_g_1",
+                          "run_ABM_ignore_noise",
+                          "run_ABM_no_intervention")) %>% 
+      mutate(p_asym = factor(p_asym)) %>% 
+      inner_join(nice_labels, by = "type") %>% 
+      filter(quarantine_days == quarantine_days_val) %>% 
+      filter(metric == metric_val) %>% 
+      ggplot(aes(x = mean_quarantined_days, y = incidence_diff, color = label)) +
+      geom_point(alpha = 0.6) +
+      # geom_smooth(se = FALSE) +
+      ggh4x::facet_grid2(DCT_sensitivity ~p_asym ,
+                         labeller = labeller(
+                           DCT_sensitivity = function(x) paste0("Sensitivity == ", x),
+                           p_asym = function(x) paste0("Prob~asym. == ", x),
+                           .default = label_parsed  # Needed to parse expressions
+                         ),
+                         scales = "free_y") +
+      theme_bw() +
+      theme(
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        panel.grid.major.x = element_blank()
+      ) +
+      labs(x = "Mean Quarantine Days per Actor",
+           y = "Total Infections Prevented (compared to no-intervention)",
+           title = paste0(filter(nice_metric, metric_val == metric) %>% .$label),
+           subtitle = paste0("Quarantined days = ", quarantine_days_val))
+    
+    } else {
     stop("Metric not avaliable")
   }
 }
@@ -220,14 +382,17 @@ plot_fun <- function(metric_val,
 # "total_inf"
 # "quarantined_total_person_days"
 # "total_contacts"
-# "efficiency_per_contact"
+# "efficiency_per_quarantined_person_day"
+# "average_times_quarantined"
+# "attack_rate_vs_mean_quarantined_days"
+# "infections_averted_vs_mean_quarantined_days"
 
-plot_fun("tot_inf_by_by_contacts",
+plot_fun("attack_rate_vs_mean_quarantined_days",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
-         quarantine_days_val = 5)
+         quarantine_days_val = 10)
 
-plot_fun("total_contacts",
+plot_fun("infections_averted_vs_mean_quarantined_days",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
          quarantine_days_val = 5)
@@ -235,23 +400,30 @@ plot_fun("total_contacts",
 plot_fun("total_inf",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
-         quarantine_days_val = 5)
+         quarantine_days_val = 10)
 
 plot_fun("quarantined_total_person_days",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
-         quarantine_days_val = 5)
+         quarantine_days_val = 10)
 
-plot_fun("tot_inf_by_by_contacts",
+plot_fun("mean_efficiency_per_quarantined_person_day",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
          quarantine_days_val = 5)
 
-plot_fun("quarantined_total_person_days",
+
+plot_fun("tot_inf_by_person_days_outside_qua",
          # p_asym_val = 0,
+         DCT_specificity = 1,
+         quarantine_days_val = 5)
+
+plot_fun("attack_rate",
+         p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
          quarantine_days_val = 5)
 
 plot_fun("quarantined_time",
          p_asym_val = 0,
-         quarantine_days_val = 5)
+         DCT_specificity = 1,
+         quarantine_days_val = 15)

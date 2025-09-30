@@ -5,7 +5,7 @@
 
 initialize_actors <- function(actor_names){
   
-  actor_states <- list(state = 0L, # 0L susceptible, 1L exposed, 2L infected, 3L recoverd
+  actor_states <- list(state = 0L, # 0L susceptible, 1L exposed, 2L infected, 3L recovered
                        first_gen_infection = FALSE, # infected by seed
                        n_contacts = 0, # track cumulative number of contacts 
                        ever_infected = FALSE, # indicator if the agent ever became infected at any point 
@@ -98,7 +98,7 @@ run_single_ABM <- function(p_infected, mean_exposure_days,
     quarantined_list_t <- vector("list", n_timesteps * n_repeat) 
   }
   
-  # For loop number of time to repeat weeks
+  # For loop number of times to repeat weeks
   for(R in 1:n_repeat){
     
     # For loop number for cycling through days

@@ -133,7 +133,7 @@ for (t in names(int_and_neighbors_by_t_only_between)){
 
 nice_fun <- function(network, cluster_labels){
   
-  assign("int_and_neighbors_by_t", network, envir = .GlobalEnv) # will add as argument to run_single_ABM
+  # assign("int_and_neighbors_by_t", network, envir = .GlobalEnv) # will add as argument to run_single_ABM
   ## Run ABM with clustering accounting for noise
   set.seed(1234, kind = "L'Ecuyer-CMRG")
   run_ABM <- parallel::mclapply(1:n_trial,
@@ -168,12 +168,13 @@ nice_fun <- function(network, cluster_labels){
                                                  quarantine_days = quarantine_days,
                                                  digital_contact_tracing_look_back = digital_contact_tracing_look_back,
                                                  DCT_sensitivity = DCT_sensitivity,
-                                                 DCT_specificity = DCT_specificity)},
+                                                 DCT_specificity = DCT_specificity,
+                                                 int_and_neighbors_by_t = network)},
                                 mc.preschedule = TRUE,
                                 mc.cores = cores)
   
   # remove the global variable to clean up
-  rm(int_and_neighbors_by_t, envir = .GlobalEnv)
+  # rm(int_and_neighbors_by_t, envir = .GlobalEnv)
   
   res <- list(
     attack_rate = quantile(do.call(c, lapply(run_ABM, function(x) x$attack_rate)), probs = c(0.25, 0.5, 0.75)),

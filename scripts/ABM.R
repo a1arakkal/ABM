@@ -106,7 +106,8 @@ DCT_specificity_seq  <- c(0, seq(.6, 1, by = .1))
 # Run ABM for multiple trials --------------------------------------------------
 
 n_trial <- 1e3
-cores <- 100L
+cores <- 200L
+seeds <- sample.int(1e8, n_trial)
 
 for (p_asym in p_asym_seq){
   for (quarantine_days in quarantine_days_seq){
@@ -116,7 +117,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with no intervention
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_for_R0 <- parallel::mclapply(1:n_trial,
-                                           FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                           FUN = function(x){
+                                             
+                                             set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                             
+                                             run_single_ABM(p_infected = p_infected,
                                                                             mean_exposure_days = 1000, # makes it so seed is the only infective for duration of ABM
                                                                             mean_infected_days = mean_infected_days,
                                                                             actor_labels = actor_labels,
@@ -138,7 +143,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with no intervention
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_no_intervention <- parallel::mclapply(1:n_trial,
-                                                    FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                    FUN = function(x){
+                                                      
+                                                      set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                      
+                                                      run_single_ABM(p_infected = p_infected,
                                                                                      mean_exposure_days = mean_exposure_days,
                                                                                      mean_infected_days = mean_infected_days,
                                                                                      actor_labels = actor_labels,
@@ -158,7 +167,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with isolating individual actors not clusters
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_isolate_individuals <- parallel::mclapply(1:n_trial,
-                                                        FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                        FUN = function(x){
+                                                          
+                                                          set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                          
+                                                          run_single_ABM(p_infected = p_infected,
                                                                                          mean_exposure_days = mean_exposure_days,
                                                                                          mean_infected_days = mean_infected_days,
                                                                                          actor_labels = actor_labels,
@@ -178,7 +191,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with clustering accounting for noise
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_accounting_for_noise <- parallel::mclapply(1:n_trial,
-                                                         FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                         FUN = function(x){
+                                                           
+                                                           set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                           
+                                                           run_single_ABM(p_infected = p_infected,
                                                                                           mean_exposure_days = mean_exposure_days,
                                                                                           mean_infected_days = mean_infected_days,
                                                                                           actor_labels = actor_labels,
@@ -199,6 +216,8 @@ for (p_asym in p_asym_seq){
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_random_lshm <- parallel::mclapply(1:n_trial,
                                                 FUN = function(x){
+                                                  
+                                                  set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
 
                                                   #random clusters same size as lshm clusters
                                                   clusters_random_lshm <- clusters_accounting_for_noise
@@ -234,6 +253,8 @@ for (p_asym in p_asym_seq){
       run_ABM_random_lshm_outside <- parallel::mclapply(1:n_trial,
                                                 FUN = function(x){
                                                   
+                                                  set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                  
                                                   run_single_ABM(p_infected = p_infected,
                                                                  mean_exposure_days = mean_exposure_days, 
                                                                  mean_infected_days = mean_infected_days,
@@ -256,6 +277,8 @@ for (p_asym in p_asym_seq){
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_random_lshm_size_and_number <- parallel::mclapply(1:n_trial,
                                                 FUN = function(x){
+                                                  
+                                                  set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                                   
                                                   n_clusters <- sample(2:10, size = 1, replace = F)
                                                   p_clust <- extraDistr::rdirichlet(1, rep(3, n_clusters))
@@ -285,7 +308,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with clustering ignoring for noise
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_ignore_noise <- parallel::mclapply(1:n_trial,
-                                                 FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                 FUN = function(x){
+                                                   
+                                                   set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                   
+                                                   run_single_ABM(p_infected = p_infected,
                                                                                   mean_exposure_days = mean_exposure_days,
                                                                                   mean_infected_days = mean_infected_days,
                                                                                   actor_labels = actor_labels,
@@ -305,7 +332,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with clustering dichotomize network with cutoff of 1
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_dichotomize_g_1 <- parallel::mclapply(1:n_trial,
-                                                    FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                    FUN = function(x){
+                                                      
+                                                      set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                      
+                                                      run_single_ABM(p_infected = p_infected,
                                                                                      mean_exposure_days = mean_exposure_days,
                                                                                      mean_infected_days = mean_infected_days,
                                                                                      actor_labels = actor_labels,
@@ -325,7 +356,11 @@ for (p_asym in p_asym_seq){
       ## Run ABM with clustering based on FB data
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_fb_clusters <- parallel::mclapply(1:n_trial,
-                                                FUN = function(x){run_single_ABM(p_infected = p_infected,
+                                                FUN = function(x){
+                                                  
+                                                  set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                  
+                                                  run_single_ABM(p_infected = p_infected,
                                                                                  mean_exposure_days = mean_exposure_days,
                                                                                  mean_infected_days = mean_infected_days,
                                                                                  actor_labels = actor_labels,
@@ -346,6 +381,8 @@ for (p_asym in p_asym_seq){
       set.seed(1234, kind = "L'Ecuyer-CMRG")
       run_ABM_random_fb <- parallel::mclapply(1:n_trial,
                                               FUN = function(x){
+                                                
+                                                set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
 
                                                 #random clusters same size as fb clusters
                                                 clusters_random_fb <- clusters_fb_network

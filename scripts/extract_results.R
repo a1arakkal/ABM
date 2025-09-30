@@ -17,7 +17,7 @@ box_plot_fun <- function(y, name){
     mutate(metric = name)
 }
 
-extract_function <- function(run_ABM, baseline){
+extract_function <- function(run_ABM, baseline, quarantine_days){
   
   n_trial <- length(run_ABM)
   
@@ -80,7 +80,22 @@ extract_function <- function(run_ABM, baseline){
   
   out <- bind_rows(out, incidence_time)
   
+  # Average times quarantined per actor ----------------------------------------
+  
+  quarantined_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$quarantined}))
+  quarantined_total <- apply(quarantined_time_stats, 2, FUN = sum)
+  
+  n_quarantined <- do.call("c", lapply(run_ABM, function(x){x$quarantined_rate}))*692
+  n_times_quarantined <- boxplot.stats(quarantined_total/n_quarantined/quarantine_days)$stats
+  n_times_quarantined <- as_tibble(t(n_times_quarantined))
+  colnames(n_times_quarantined) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  average_times_quarantined <- n_times_quarantined%>% 
+    mutate(metric = "average_times_quarantined")
+  
+  out <- bind_rows(out, average_times_quarantined)
+  
   # Loss function 1: total infections/total person days outside quarnatine
+  
   incidence_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$incidence}))
   incidence_total <- apply(incidence_time_stats, 2, FUN = sum)
   
@@ -91,7 +106,7 @@ extract_function <- function(run_ABM, baseline){
   tot_inf_by_person_days_outside_qua <- boxplot.stats(incidence_total/person_time_outside_quarantine)$stats
   tot_inf_by_person_days_outside_qua <- as_tibble(t(tot_inf_by_person_days_outside_qua))
   colnames(tot_inf_by_person_days_outside_qua) <- c("ymin", "Q1", "median", "Q3", "ymax")
-  tot_inf_by_person_days_outside_qua <- tot_inf_by_person_days_outside_qua%>% 
+  tot_inf_by_person_days_outside_qua <- tot_inf_by_person_days_outside_qua %>% 
     mutate(metric = "tot_inf_by_person_days_outside_qua")
   
   tot_inf <- boxplot.stats(incidence_total)$stats
@@ -132,36 +147,67 @@ extract_function <- function(run_ABM, baseline){
                    tot_inf_by_by_contacts,
                    tot_contacts)
   
-  # Loss function 3: total infections prevent (i.e., I no inverention - I intevention)/ total contact prevented  (i.e., C no inverention - C intevention)
+  # Loss function 3: total infections prevent (i.e., I no inverention - I intevention) per quarantined person-days
   incidence_time_stats_baseline <- do.call("cbind", lapply(baseline, function(x){x$incidence}))
   incidence_total_baseline <- apply(incidence_time_stats_baseline, 2, FUN = sum)
 
-  contacts_time_stats_baseline <- do.call("cbind", lapply(baseline, function(x){x$average_interaction*692})) # average_interaction[k] <- sum(n_interactions)/length(actors) 
-  contacts_total_baseline <- apply(contacts_time_stats_baseline, 2, FUN = sum)
+  quarantined_time_stats <- do.call("cbind", lapply(run_ABM, function(x){x$quarantined}))
+  quarantined_total <- apply(quarantined_time_stats, 2, FUN = sum)
   
   incidence_diff <- (incidence_total_baseline)-(incidence_total)
-  contact_diff <- (contacts_total_baseline)-(contacts_total) + 1e-6
-  efficiency_per_contact <- incidence_diff[incidence_diff>=0]/contact_diff[incidence_diff>=0]
+  efficiency_per_quarantined <- incidence_diff[incidence_diff>=0]/quarantined_total[incidence_diff>=0]
   
-  efficiency_per_contact <- boxplot.stats(efficiency_per_contact)$stats
-  efficiency_per_contact <- as_tibble(t(efficiency_per_contact))
-  colnames(efficiency_per_contact) <- c("ymin", "Q1", "median", "Q3", "ymax")
-  efficiency_per_contact <- efficiency_per_contact%>% 
-    mutate(metric = "efficiency_per_contact")
+  efficiency_per_quarantined <- boxplot.stats(efficiency_per_quarantined)$stats
+  efficiency_per_quarantined <- as_tibble(t(efficiency_per_quarantined))
+  colnames(efficiency_per_quarantined) <- c("ymin", "Q1", "median", "Q3", "ymax")
+  efficiency_per_quarantined <- efficiency_per_quarantined%>% 
+    mutate(metric = "efficiency_per_quarantined_person_day")
   
   mean_inc_baseline <- mean(incidence_total_baseline)
   mean_inc_intervention <- mean(incidence_total)
-  mean_contacts_baseline <- mean(contacts_total_baseline)
-  mean_contacts_intervention <- mean(contacts_total)
+  mean_contacts_quarantined <- mean(quarantined_total)
+    
   mean_efficiency <- (mean_inc_baseline - mean_inc_intervention) / 
-    (mean_contacts_baseline - mean_contacts_intervention + 1e-6)
+    (mean_contacts_quarantined + 1e-6)
   
-  mean_efficiency_per_contact <- tibble(mean = mean_efficiency) %>% 
-    mutate(metric = "mean_efficiency_per_contact")
+  mean_efficiency_per_quarantined <- tibble(mean = mean_efficiency) %>% 
+    mutate(metric = "mean_efficiency_per_quarantined_person_day")
   
   out <- bind_rows(out, 
-                   efficiency_per_contact,
-                   mean_efficiency_per_contact)
+                   efficiency_per_quarantined,
+                   mean_efficiency_per_quarantined)
+  
+  # Data for attack rate vs average time in quarantine plot --------------------
+  
+  mean_quarantined_days <- sapply(run_ABM, function(x) x$average_time_in_quarantine)
+  attack_rates <- sapply(run_ABM, function(x) x$attack_rate)
+
+  temp <- tibble(mean_quarantined_days = mean_quarantined_days,
+                 attack_rates = attack_rates) %>% 
+    mutate(metric = "attack_rate_vs_mean_quarantined_days")
+  
+  out <- bind_rows(out, 
+                   temp)
+  
+  # # Data for total infections vs person days in quarantine plot --------------------
+  # 
+  # temp <- tibble(incidence_total = incidence_total,
+  #                quarantined_total = quarantined_total) %>% 
+  #   mutate(metric = "total_infections_vs_person_days_in_quarantine")
+  # 
+  # out <- bind_rows(out, 
+  #                  temp)
+  
+  # Data for infections averted vs average time in quarantine plot --------------------
+  
+  temp <- tibble(mean_quarantined_days = mean_quarantined_days,
+                 incidence_diff = incidence_diff) %>% 
+    filter(incidence_diff > 0)
+    mutate(metric = "infections_averted_vs_mean_quarantined_days")
+  
+  out <- bind_rows(out, 
+                   temp)
+  
   
   return(out)
   
@@ -182,7 +228,8 @@ outer_fun <- function(file_name){
     
     out <- tibble(type = names(data_list)[stringr::str_detect(names(data_list), pattern = "run_ABM")]) %>% 
       mutate(res = map(type, ~extract_function(run_ABM = data_list[[.]],
-                                               baseline = data_list[["run_ABM_no_intervention"]]))) %>% 
+                                               baseline = data_list[["run_ABM_no_intervention"]],
+                                               quarantine_days = data_list[["quarantine_days"]]))) %>% 
       unnest(res) %>% 
       mutate(quarantine_days = data_list[["quarantine_days"]],
              p_asym = data_list[["p_asym"]],
@@ -215,7 +262,7 @@ outer_fun <- function(file_name){
 
 main_res <- parallel::mclapply(files,
                                FUN = function(x){outer_fun(x)},
-                               mc.cores = 20)
+                               mc.cores = 80)
 
 main_res <- do.call("bind_rows", main_res)
 
