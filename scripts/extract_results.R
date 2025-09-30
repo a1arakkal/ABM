@@ -155,7 +155,8 @@ extract_function <- function(run_ABM, baseline, quarantine_days){
   quarantined_total <- apply(quarantined_time_stats, 2, FUN = sum)
   
   incidence_diff <- (incidence_total_baseline)-(incidence_total)
-  efficiency_per_quarantined <- incidence_diff[incidence_diff>=0]/quarantined_total[incidence_diff>=0]
+  # efficiency_per_quarantined <- incidence_diff[incidence_diff>=0]/quarantined_total[incidence_diff>=0]
+  efficiency_per_quarantined <- incidence_diff/quarantined_total
   
   efficiency_per_quarantined <- boxplot.stats(efficiency_per_quarantined)$stats
   efficiency_per_quarantined <- as_tibble(t(efficiency_per_quarantined))
@@ -202,7 +203,7 @@ extract_function <- function(run_ABM, baseline, quarantine_days){
   
   temp <- tibble(mean_quarantined_days = mean_quarantined_days,
                  incidence_diff = incidence_diff) %>% 
-    filter(incidence_diff > 0)
+    # filter(incidence_diff > 0) %>% 
     mutate(metric = "infections_averted_vs_mean_quarantined_days")
   
   out <- bind_rows(out, 
