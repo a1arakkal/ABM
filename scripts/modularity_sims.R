@@ -286,7 +286,7 @@ min_degree_t1 <- 0
 digital_contact_tracing_look_back <- 4
 
 # Sensitivity and specificity of digital contact tracing if used as intervention (allows for false positives and false negatives)
-DCT_sensitivity_seq  <- round(c(0, seq(.6, 1, by = .1)), 1)
+DCT_sensitivity_seq  <- round(seq(.6, 1, by = .1), 1)
 DCT_specificity <- 1
 
 # Number of trials and number of cores
