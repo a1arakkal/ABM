@@ -221,6 +221,8 @@ for (p_asym in p_asym_seq){
                                                     permute <- sample(names(clusters_random_lshm), size = length(clusters_random_lshm), replace = FALSE)
                                                     names(clusters_random_lshm) <- permute
                                                     
+                                                    set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                                    
                                                     run_single_ABM(p_infected = p_infected,
                                                                    mean_exposure_days = mean_exposure_days,
                                                                    mean_infected_days = mean_infected_days,
@@ -281,6 +283,8 @@ for (p_asym in p_asym_seq){
                                                                     clusters_random_lshm <- rmultinom(length(non_isolates), 1, prob = p_clust)
                                                                     clusters_random_lshm <- apply(clusters_random_lshm , 2, which.max)
                                                                     names(clusters_random_lshm) <- non_isolates
+                                                                    
+                                                                    set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                                                     
                                                                     run_single_ABM(p_infected = p_infected,
                                                                                    mean_exposure_days = mean_exposure_days, 
@@ -379,6 +383,8 @@ for (p_asym in p_asym_seq){
                                                   clusters_random_fb <- clusters_fb_network
                                                   permute <- sample(names(clusters_random_fb), size = length(clusters_random_fb), replace = FALSE)
                                                   names(clusters_random_fb) <- permute
+                                                  
+                                                  set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                                   
                                                   run_single_ABM(p_infected = p_infected,
                                                                  mean_exposure_days = mean_exposure_days,

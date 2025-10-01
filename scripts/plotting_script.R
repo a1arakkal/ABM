@@ -52,6 +52,17 @@ nice_labels <- tibble(
                           "Clustering - Thresholding"
                         )))
 
+nice_labels <- nice_labels %>% 
+  filter(type %in% c("run_ABM_no_intervention",
+         "run_ABM_isolate_individuals",
+         "run_ABM_accounting_for_noise",
+         # "run_ABM_random_lshm",
+         # "run_ABM_random_lshm_outside",
+         # "run_ABM_random_lshm_size_and_number",
+         "run_ABM_fb_clusters",
+         # "run_ABM_random_fb",
+         "run_ABM_dichotomize_g_1",
+         "run_ABM_ignore_noise"))
 
 nice_metric <- tibble(
   metric = c("R0",
@@ -390,7 +401,7 @@ plot_fun <- function(metric_val,
 plot_fun("attack_rate_vs_mean_quarantined_days",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
-         quarantine_days_val = 10)
+         quarantine_days_val = 5)
 
 plot_fun("infections_averted_vs_mean_quarantined_days",
          p_asym_val = c(0, .2, .4, .6, .8),
@@ -400,14 +411,14 @@ plot_fun("infections_averted_vs_mean_quarantined_days",
 plot_fun("total_inf",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
-         quarantine_days_val = 10)
+         quarantine_days_val = 5)
 
 plot_fun("quarantined_total_person_days",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
          quarantine_days_val = 10)
 
-plot_fun("mean_efficiency_per_quarantined_person_day",
+plot_fun("efficiency_per_quarantined_person_day",
          p_asym_val = c(0, .2, .4, .6, .8),
          DCT_specificity = 1,
          quarantine_days_val = 5)

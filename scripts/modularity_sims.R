@@ -378,6 +378,8 @@ for(DCT_sensitivity in DCT_sensitivity_seq){
                                                                       assumed_true_communities = assumed_true_communities,
                                                                       prob_within = mod)
                                         
+                                        set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                        
                                         run_single_ABM(p_infected = p_infected,
                                                        mean_exposure_days = mean_exposure_days,
                                                        mean_infected_days = mean_infected_days,
@@ -406,6 +408,8 @@ for(DCT_sensitivity in DCT_sensitivity_seq){
                                                                       total_actors = total_actors,
                                                                       assumed_true_communities = assumed_true_communities,
                                                                       prob_within = mod)
+                                        
+                                        set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                         
                                         run_single_ABM(p_infected = p_infected,
                                                        mean_exposure_days = mean_exposure_days,
@@ -443,6 +447,8 @@ for(DCT_sensitivity in DCT_sensitivity_seq){
                                                permute <- sample(names(clusters_random), size = length(clusters_random), replace = FALSE)
                                                names(clusters_random) <- permute
                                                
+                                               set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
+                                               
                                                run_single_ABM(p_infected = p_infected,
                                                               mean_exposure_days = mean_exposure_days,
                                                               mean_infected_days = mean_infected_days,
@@ -471,6 +477,8 @@ for(DCT_sensitivity in DCT_sensitivity_seq){
                                                                       total_actors = total_actors,
                                                                       assumed_true_communities = assumed_true_communities,
                                                                       prob_within = mod)
+                                        
+                                        set.seed(seeds[x], kind = "L'Ecuyer-CMRG")
                                         
                                         run_single_ABM(p_infected = p_infected,
                                                        mean_exposure_days = mean_exposure_days,
