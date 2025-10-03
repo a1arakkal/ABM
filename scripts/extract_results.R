@@ -252,6 +252,10 @@ outer_fun <- function(file_name){
                   ymax = NA,
                   metric = NA,
                   t = NA, 
+                  mean = NA,
+                  mean_quarantined_days = NA,
+                  attack_rates = NA,
+                  incidence_diff = NA,
                   quarantine_days = NA,
                   p_asym = NA,
                   DCT_sensitivity = NA,
@@ -268,4 +272,66 @@ main_res <- parallel::mclapply(files,
 main_res <- do.call("bind_rows", main_res)
 
 save(main_res, file = "main_res.RData")
+rm(main_res, outer_fun, files)
 
+# Extract Modularity Results --------------------------------------------------------------
+
+setwd("/Users/atlan/dissertation/real_data_application/paper3/res_modularity")
+files <- list.files()
+files <- setdiff(files, "main_res.RData")
+
+outer_fun <- function(file_name){
+  
+  tryCatch({
+    
+    data_list <- readRDS(file_name)
+    
+    out <- tibble(type = names(data_list)[stringr::str_detect(names(data_list), pattern = "run_ABM")]) %>% 
+      mutate(res = map(type, ~extract_function(run_ABM = data_list[[.]],
+                                               baseline = data_list[["run_ABM_no_intervention"]],
+                                               quarantine_days = 5))) %>% # quarantine_days  <- 5 from modularity_sims.R
+      unnest(res) %>% 
+      mutate(quarantine_days = 5, # quarantine_days  <- 5 from modularity_sims.R
+             p_asym = data_list[["p_asym"]],
+             DCT_sensitivity = data_list[["DCT_sensitivity"]],
+             DCT_specificity = data_list[["DCT_specificity"]],
+             R0_est_only_seed_infected = data_list[["R0"]],
+             cluster_label = data_list[["cluster"]],
+             modularity = data_list[["modularity"]])
+    
+    rm(data_list)
+    
+    return(out)
+  }, 
+  error = function(e){
+    cat("Error with", file_name)
+    return(tibble(type = NA,
+                  ymin = NA,
+                  Q1 = NA,
+                  median = NA,
+                  Q3 = NA,
+                  ymax = NA,
+                  metric = NA,
+                  t = NA, 
+                  mean = NA,
+                  mean_quarantined_days = NA,
+                  attack_rates = NA,
+                  incidence_diff = NA,
+                  quarantine_days = NA,
+                  p_asym = NA,
+                  DCT_sensitivity = NA,
+                  DCT_specificity = NA,
+                  R0_est_only_seed_infected = NA,
+                  cluster_label = NA,
+                  modularity = NA))
+  }
+  )
+}
+
+main_res <- parallel::mclapply(files,
+                               FUN = function(x){outer_fun(x)},
+                               mc.cores = 80)
+
+main_res <- do.call("bind_rows", main_res)
+
+save(main_res, file = "main_res.RData")
