@@ -563,9 +563,9 @@ colors_group <- c("No Intervention" = "#FF6A33",
 #   filter(label != "No Intervention") %>% 
 #   select(2:7, p_asym, modularity, label) %>% 
 #   distinct() %>% 
-#   group_by(p_asym, modularity, label) %>% 
-#   filter(median == min(median)) %>% 
-#   ungroup() %>% 
+#  # group_by(p_asym, modularity, label) %>%
+#  # filter(median == min(median)) %>%
+#  # ungroup() %>% 
 #   mutate(label = factor(label, 
 #                         levels = c(
 #                           "No Intervention",
@@ -635,9 +635,6 @@ fig7 <- main_res %>%
   filter(label != "No Intervention") %>% 
   select(2:7, p_asym, modularity, label) %>% 
   distinct() %>% 
-  group_by(p_asym, modularity, label) %>% 
-  filter(median == min(median)) %>% 
-  ungroup() %>% 
   mutate(label = factor(label, 
                         levels = c(
                           "No Intervention",
@@ -673,7 +670,7 @@ fig7 <- main_res %>%
   ) +
   labs(
     x = "Modularity",
-    y = "Ratio of total infections versus total number of contacts"
+    y = "Ratio of total infections versus\ntotal number of contacts"
   )+
   geom_vline(xintercept = seq(1.5, length(seq(0, 1, 0.1)) - 0.5, by = 1),
              linetype = "dashed", color = "grey50")+
@@ -707,9 +704,9 @@ dev.off()
 #   filter(label != "No Intervention") %>%
 #   select(2:7, p_asym, modularity, label) %>%
 #   distinct() %>%
-#   group_by(p_asym, modularity, label) %>%
-#   filter(median == min(median)) %>%
-#   ungroup() %>%
+#  # group_by(p_asym, modularity, label) %>%
+#  # filter(median == min(median)) %>%
+#  # ungroup() %>% 
 #   mutate(label = factor(label,
 #                         levels = c(
 #                           "No Intervention",
@@ -779,9 +776,9 @@ fig8 <- main_res %>%
   filter(label != "No Intervention") %>% 
   select(2:7, p_asym, modularity, label) %>% 
   distinct() %>% 
-  group_by(p_asym, modularity, label) %>% 
-  filter(median == min(median)) %>% 
-  ungroup() %>% 
+  group_by(p_asym, modularity, label) %>%
+  filter(median == min(median)) %>%
+  ungroup() %>%
   mutate(label = factor(label, 
                         levels = c(
                           "No Intervention",
@@ -790,7 +787,7 @@ fig8 <- main_res %>%
                           "DCT (Sen. = 1.0)",
                           "Clustering",
                           "Clustering - Random"
-                        ))) %>% 
+                        ))) %>%
   # count(label) %>%
   ggplot(aes(x = factor(modularity), fill = label)) +
   geom_boxplot(
@@ -817,7 +814,7 @@ fig8 <- main_res %>%
   ) +
   labs(
     x = "Modularity",
-    y = "Ratio of total infections versus total number of contacts"
+    y = "Ratio of total infections versus\ntotal number of contacts"
   )+
   geom_vline(xintercept = seq(1.5, length(seq(0, 1, 0.1)) - 0.5, by = 1),
              linetype = "dashed", color = "grey50")+
